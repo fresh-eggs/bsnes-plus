@@ -123,11 +123,11 @@ uint8 BSXCart::read(unsigned addr) {
   bool data = false;
   
   switch(n) {
-  case 0x00: data = regs.irq; break;
-  case 0x01: data = regs.irq_en; break;
-  default:   data = regs.r[n]; break;
-  case 0x0e: // 14 & 15 are write only
-  case 0x0f: data = false; break;
+    case 0x00: data = regs.irq; break;
+    case 0x01: data = regs.irq_en; break;
+    default:   data = regs.r[n]; break;
+    case 0x0e: // 14 & 15 are write only
+    case 0x0f: data = false; break;
   }
   
   return (data << 7) | (cpu.regs.mdr &= 0x7f);

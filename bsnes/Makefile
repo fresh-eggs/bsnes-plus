@@ -6,6 +6,7 @@ ifeq ($(ui),)
   ui := ui-qt
 endif
 
+profile := accuracy
 ifeq ($(profile),)
   profile := compatibility
   ifeq ($(out),)
@@ -20,7 +21,7 @@ objdir := obj/$(profile)
 # compiler
 c       := $(compiler) -xc -std=gnu99
 cpp     := $(compiler) -std=gnu++0x
-flags   := -I. -I$(common) -I$(snes)
+flags   := -I. -I$(common) -I$(snes) -I/home/eggs/security/src/snes/qt-build/qtbase/include/QtCore -I/home/eggs/security/src/snes/qt-build/qtbase/include/QtGui -I/home/eggs/security/src/snes/qt-build/qtbase/include/QtWidgets
 link    :=
 objects :=
 

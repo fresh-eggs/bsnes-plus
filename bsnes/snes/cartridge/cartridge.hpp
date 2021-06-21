@@ -6,6 +6,7 @@ public:
     Bsx,
     SufamiTurbo,
     SuperGameBoy,
+    XBand,
   };
 
   enum class Region : unsigned {
@@ -44,6 +45,7 @@ public:
   readonly<unsigned> supergameboy_rtc_size;
 
   readonly<bool> has_bsx_slot;
+  readonly<bool> has_xband_slot;
   readonly<bool> has_superfx;
   readonly<bool> has_sa1;
   readonly<bool> has_necdsp;
@@ -90,6 +92,7 @@ private:
   void parse_xml(const lstring&);
   void parse_xml_cartridge(const char*);
   void parse_xml_bsx(const char*);
+  void parse_xml_xband(const char*);
   void parse_xml_sufami_turbo(const char*, bool);
   void parse_xml_gameboy(const char*);
 
@@ -100,6 +103,7 @@ private:
   void xml_parse_sa1(xml_element&);
   void xml_parse_necdsp(xml_element&);
   void xml_parse_bsx(xml_element&);
+  void xml_parse_xband(xml_element&);
   void xml_parse_sufamiturbo(xml_element&);
   void xml_parse_supergameboy(xml_element&);
   void xml_parse_srtc(xml_element&);
@@ -121,6 +125,7 @@ namespace memory {
   extern MappedRAM stArom, stAram;
   extern MappedRAM stBrom, stBram;
   extern MappedRAM gbrom, gbram, gbrtc;
+  extern MappedRAM xbandSram;
 };
 
 extern Cartridge cartridge;

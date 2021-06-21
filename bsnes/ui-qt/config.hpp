@@ -30,6 +30,7 @@ public:
     string rom, save, state, patch, cheat, data;
     string bsx, st, sgb;
     string shader;
+    string xband;
 
     struct Current {
       string folder, movie, shader, cartridge, exportVRAM;

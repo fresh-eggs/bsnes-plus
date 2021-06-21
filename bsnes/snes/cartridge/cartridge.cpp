@@ -15,6 +15,7 @@ namespace memory {
   MappedRAM stArom, stAram;
   MappedRAM stBrom, stBram;
   MappedRAM gbrom, gbram, gbrtc;
+  MappedRAM xbandSram;
 };
 
 Cartridge cartridge;
@@ -33,6 +34,7 @@ int Cartridge::rom_offset(unsigned addr) const {
 }
 
 void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
+  fprintf(stderr, "[*][Cartridge::load]\n");
   mode = cartridge_mode;
   region = Region::NTSC;
   ram_size = 0;
@@ -45,6 +47,7 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
   supergameboy_rtc_size = 0;
 
   has_bsx_slot   = false;
+  has_xband_slot = false;
   has_superfx    = false;
   has_sa1        = false;
   has_necdsp     = false;
@@ -59,7 +62,7 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
   has_serial     = false;
 
   parse_xml(xml_list);
-//print(xml_list[0], "\n\n");
+  print(xml_list[0], "\n\n");
 
   // autodetect MSU1 if it wasn't specified in a manifest
   if(!has_msu1 && file::exists(string(basename(), ".msu"))) {
@@ -77,6 +80,11 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
 
   if(has_srtc || has_spc7110rtc) {
     memory::cartrtc.map(allocate<uint8_t>(20, 0xff), 20);
+  }
+
+  if(mode == Mode::XBand) {
+    fprintf(stderr, "[*][cartridge.cpp:load] allocate xband mem \n");
+    memory::xbandSram.map(allocate<uint8_t>(0x10000, 0xff), 0x10000);
   }
 
   if(mode == Mode::Bsx) {
@@ -107,12 +115,14 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
   memory::gbrom.write_protect(true);
   memory::gbram.write_protect(false);
   memory::gbrtc.write_protect(false);
+  memory::xbandSram.write_protect(false);
 
   unsigned checksum = ~0;         foreach(n, memory::cartrom) checksum = crc32_adjust(checksum, n);
   if(memory::bsxpack.size() != 0) foreach(n, memory::bsxpack) checksum = crc32_adjust(checksum, n);
   if(memory::stArom.size()  != 0) foreach(n, memory::stArom ) checksum = crc32_adjust(checksum, n);
   if(memory::stBrom.size()  != 0) foreach(n, memory::stBrom ) checksum = crc32_adjust(checksum, n);
   if(memory::gbrom.size()   != 0) foreach(n, memory::gbrom  ) checksum = crc32_adjust(checksum, n);
+  if(memory::xbandSram.size() != 0) foreach(n, memory::xbandSram) checksum = crc32_adjust(checksum, n);
   crc32 = ~checksum;
 
   sha256_ctx sha;
@@ -144,6 +154,7 @@ void Cartridge::unload() {
   memory::gbrom.reset();
   memory::gbram.reset();
   memory::gbrtc.reset();
+  memory::xbandSram.reset();
 
   if(loaded == false) return;
   bus.unload_cart();

@@ -1,8 +1,9 @@
 #ifdef CARTRIDGE_CPP
 
 void Cartridge::parse_xml(const lstring &list) {
+  fprintf(stderr, "[*][Cartridge::parse_xml] enter\n");
   mapping.reset();
-
+   
   //parse any slots *before* parsing the base cartridge
   if(mode == Mode::BsxSlotted) {
     parse_xml_bsx(list[1]);
@@ -13,17 +14,23 @@ void Cartridge::parse_xml(const lstring &list) {
     parse_xml_sufami_turbo(list[2], 1);
   } else if(mode == Mode::SuperGameBoy) {
     parse_xml_gameboy(list[1]);
+  }else if(mode == Mode::XBand) {
+    parse_xml_xband(list[1]);
   }
 
   parse_xml_cartridge(list[0]);
+  fprintf(stderr, "[*][Cartridge::parse_xml] exit\n");
 }
 
 void Cartridge::parse_xml_cartridge(const char *data) {
+  fprintf(stderr, "[*][Cartridge::parse_xml_cartridge] enter\n");
   xml_element document = xml_parse(data);
+  fprintf(stderr, "[*][Cartridge::parse_xml_cartridge] doc size %d\n", document.element.size());
   if(document.element.size() == 0) return;
 
   foreach(head, document.element) {
     if(head.name == "cartridge") {
+      fprintf(stderr, "[*][Cartridge::parse_xml_cartridge] head name is cartridge\n");
       foreach(attr, head.attribute) {
         if(attr.name == "region") {
           if(attr.content == "NTSC") region = Region::NTSC;
@@ -32,12 +39,15 @@ void Cartridge::parse_xml_cartridge(const char *data) {
       }
 
       foreach(node, head.element) {
+        const char* node_name = node.name;
+        fprintf(stderr, "[*][Cartridge::parse_xml_cartridge] node_name: %s\n", node_name);
         if(node.name == "rom") xml_parse_rom(node);
         if(node.name == "ram") xml_parse_ram(node);
         if(node.name == "superfx") xml_parse_superfx(node);
         if(node.name == "sa1") xml_parse_sa1(node);
         if(node.name == "necdsp") xml_parse_necdsp(node);
         if(node.name == "bsx") xml_parse_bsx(node);
+        if(node.name == "xband") xml_parse_xband(node);
         if(node.name == "sufamiturbo") xml_parse_sufamiturbo(node);
         if(node.name == "supergameboy") xml_parse_supergameboy(node);
         if(node.name == "srtc") xml_parse_srtc(node);
@@ -51,6 +61,10 @@ void Cartridge::parse_xml_cartridge(const char *data) {
       }
     }
   }
+  fprintf(stderr, "[*][Cartridge::parse_xml_cartridge] exit\n");
+}
+
+void Cartridge::parse_xml_xband(const char *data) {
 }
 
 void Cartridge::parse_xml_bsx(const char *data) {
@@ -138,6 +152,7 @@ void Cartridge::xml_parse_ram(xml_element &root) {
   foreach(attr, root.attribute) {
     if(attr.name == "size") ram_size = hex(attr.content);
   }
+  fprintf(stderr, "[*][xml.cpp]%d\n", ram_size);
   if(ram_size > 0) {
     xml_parse_memory(root, memory::cartram);
   }
@@ -310,6 +325,54 @@ void Cartridge::xml_parse_bsx(xml_element &root) {
       }
     }
   }
+}
+
+void Cartridge::xml_parse_xband(xml_element &root) {
+  fprintf(stderr, "[*][Cartridge::xml_parse_xband] enter\n");
+  has_xband_slot = true;
+
+  if(mode != Mode::XBand) return;
+  
+  foreach(node, root.element) {
+    if (node.name == "rom") {
+      fprintf(stderr, "[*][Cartridge::xml_parse_xband] rom\n");
+      foreach(leaf, node.element) {
+        if(leaf.name == "map") {
+          Mapping m(xband_cart);
+          foreach(attr, leaf.attribute) {
+            if(attr.name == "address") xml_parse_address(m, attr.content);
+          }
+          mapping.append(m);
+        }
+      }
+    } else if(node.name == "ram") {
+      fprintf(stderr, "[*][Cartridge::xml_parse_xband] ram\n");
+      xml_parse_memory(node, memory::xbandSram);
+    } else if(node.name == "mcu") {
+      fprintf(stderr, "[*][Cartridge::xml_parse_xband] mcu\n");
+      foreach(leaf, node.element) {
+        if(leaf.name == "map") {
+          Mapping m(xband_cart);
+          foreach(attr, leaf.attribute) {
+            if(attr.name == "address") xml_parse_address(m, attr.content);
+          }
+          mapping.append(m);
+        }
+      }
+    } else if(node.name == "mmio") {
+      fprintf(stderr, "[*][Cartridge::xml_parse_xband] mimo\n");
+      foreach(leaf, node.element) {
+        if(leaf.name == "map") {
+          Mapping m((MMIO&)xband_base);
+          foreach(attr, leaf.attribute) {
+            if(attr.name == "address") xml_parse_address(m, attr.content);
+          }
+          mapping.append(m);
+        }
+      }
+    }
+  }
+  fprintf(stderr, "[*][Cartridge::xml_parse_xband] exit\n");
 }
 
 void Cartridge::xml_parse_sufamiturbo(xml_element &root) {

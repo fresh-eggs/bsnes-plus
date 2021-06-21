@@ -10,6 +10,7 @@ public:
   string baseXml;
   string slotAXml;
   string slotBXml;
+  string xBandXML;
 
   struct Information {
     string name;
@@ -24,6 +25,7 @@ public:
   bool loadNormal(const char*);
   bool loadBsxSlotted(const char*, const char*);
   bool loadBsx(const char*, const char*);
+  bool loadXBand(const char*, const char*);
   bool loadSufamiTurbo(const char*, const char *, const char*);
   bool loadSuperGameBoy(const char*, const char*);
   bool loadSpc(const char*);

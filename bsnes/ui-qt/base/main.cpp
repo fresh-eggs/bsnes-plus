@@ -21,6 +21,8 @@ MainWindow::MainWindow() {
 
   system_loadSpecial = system->addMenu("Load &Special");
 
+  system_loadSpecial_xband = system_loadSpecial->addAction("Load XBAND Cartridge ...");
+
   system_loadSpecial_bsx = system_loadSpecial->addAction("Load &BS-X Cartridge ...");
   
   system_loadSpecial_bsxSlotted = system_loadSpecial->addAction("Load BS-X &Slotted Cartridge ...");
@@ -260,6 +262,7 @@ MainWindow::MainWindow() {
   connect(system_reload, SIGNAL(triggered()), this, SLOT(reloadCartridge()));
   connect(system_loadSpecial_bsxSlotted, SIGNAL(triggered()), this, SLOT(loadBsxSlottedCartridge()));
   connect(system_loadSpecial_bsx, SIGNAL(triggered()), this, SLOT(loadBsxCartridge()));
+  connect(system_loadSpecial_xband, SIGNAL(triggered()), this, SLOT(loadXBandCartridge()));
   connect(system_loadSpecial_sufamiTurbo, SIGNAL(triggered()), this, SLOT(loadSufamiTurboCartridge()));
   connect(system_loadSpecial_superGameBoy, SIGNAL(triggered()), this, SLOT(loadSuperGameBoyCartridge()));
   connect(system_saveMemoryPack, SIGNAL(triggered()), this, SLOT(saveMemoryPack()));
@@ -418,6 +421,10 @@ void MainWindow::loadBsxSlottedCartridge() {
 
 void MainWindow::loadBsxCartridge() {
   loaderWindow->loadBsxCartridge(config().path.bsx, "");
+}
+
+void MainWindow::loadXBandCartridge() {
+  loaderWindow->loadXBandCartridge(config().path.xband, "");
 }
 
 void MainWindow::loadSufamiTurboCartridge() {

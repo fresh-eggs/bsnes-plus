@@ -89,6 +89,8 @@ void System::init(Interface *interface_) {
   st0018.init();
   msu1.init();
   serial.init();
+  xband_cart.init();
+  xband_base.init();
 
   video.init();
   audio.init();
@@ -125,6 +127,8 @@ void System::power() {
   if(expansion == ExpansionPortDevice::BSX) bsxbase.enable();
   if(cartridge.bsxpack_type() == Cartridge::BSXPackType::FlashROM) bsxflash.enable();
   if(cartridge.mode() == Cartridge::Mode::Bsx) bsxcart.enable();
+  if(cartridge.mode() == Cartridge::Mode::XBand) xband_cart.enable();
+  if(cartridge.mode() == Cartridge::Mode::XBand) xband_base.enable();
   if(cartridge.mode() == Cartridge::Mode::SuperGameBoy) supergameboy.enable();
 
   if(cartridge.has_superfx()) superfx.enable();
@@ -149,6 +153,7 @@ void System::power() {
   
   if(cartridge.bsxpack_type() == Cartridge::BSXPackType::FlashROM) bsxflash.power();
   if(cartridge.mode() == Cartridge::Mode::Bsx) bsxcart.power();
+  if(cartridge.mode() == Cartridge::Mode::XBand) xband_cart.power();
   if(cartridge.mode() == Cartridge::Mode::SuperGameBoy) supergameboy.power();
 
   if(cartridge.has_superfx()) superfx.power();
@@ -165,6 +170,7 @@ void System::power() {
 
   if(expansion == ExpansionPortDevice::BSX) cpu.coprocessors.append(&bsxbase);
   if(cartridge.mode() == Cartridge::Mode::SuperGameBoy) cpu.coprocessors.append(&supergameboy);
+  if(cartridge.mode() == Cartridge::Mode::XBand) cpu.coprocessors.append(&xband_base);
   if(cartridge.has_superfx()) cpu.coprocessors.append(&superfx);
   if(cartridge.has_sa1()) cpu.coprocessors.append(&sa1);
   if(cartridge.has_necdsp()) cpu.coprocessors.append(&necdsp);
@@ -190,6 +196,7 @@ void System::reset() {
   
   if(cartridge.bsxpack_type() == Cartridge::BSXPackType::FlashROM) bsxflash.reset();
   if(cartridge.mode() == Cartridge::Mode::Bsx) bsxcart.reset();
+  if(cartridge.mode() == Cartridge::Mode::XBand) xband_cart.reset();
   if(cartridge.mode() == Cartridge::Mode::SuperGameBoy) supergameboy.reset();
 
   if(cartridge.has_superfx()) superfx.reset();

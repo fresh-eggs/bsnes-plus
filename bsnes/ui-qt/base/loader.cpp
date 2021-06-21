@@ -108,6 +108,22 @@ void LoaderWindow::loadBsxCartridge(const char *fileBase, const char *fileSlot1)
   showWindow("Load BS-X Cartridge");
 }
 
+void LoaderWindow::loadXBandCartridge(const char *fileBase, const char *fileSlot1) {
+  hide();
+  baseLabel->show(),  baseFile->show(),  baseBrowse->show(),  baseClear->show();
+  slot1Label->show(), slot1File->show(), slot1Browse->show(), slot1Clear->show();
+  slot2Label->hide(), slot2File->hide(), slot2Browse->hide(), slot2Clear->hide();
+
+  slot1Label->setText("Slot cartridge:");
+
+  baseFile->setText(fileBase);
+  slot1File->setText(fileSlot1);
+
+  syncUi();
+  mode = SNES::Cartridge::Mode::XBand;
+  showWindow("Load XBAND Cartridge");
+}
+
 void LoaderWindow::loadSufamiTurboCartridge(const char *fileBase, const char *fileSlot1, const char *fileSlot2) {
   hide();
   baseLabel->show(),  baseFile->show(),  baseBrowse->show(),  baseClear->show();
@@ -189,6 +205,10 @@ void LoaderWindow::selectSlot1Cartridge() {
       fileBrowser->setWindowTitle("Load Game Boy Cartridge");
       fileBrowser->loadCartridge(FileBrowser::LoadSlot1, 3);
       break;
+    case SNES::Cartridge::Mode::XBand:
+      fileBrowser->setWindowTitle("Load XBAND Cartridge");
+      fileBrowser->loadCartridge(FileBrowser::LoadSlot1, 4);
+      break;
   }
 }
 
@@ -221,6 +241,11 @@ void LoaderWindow::onLoad() {
     case SNES::Cartridge::Mode::Bsx: {
       config().path.bsx = base;
       cartridge.loadBsx(base, slot1);
+    } break;
+
+    case SNES::Cartridge::Mode::XBand: {
+      //config().path.xband = base;
+      cartridge.loadXBand(base, slot1);
     } break;
 
     case SNES::Cartridge::Mode::SufamiTurbo: {

@@ -27,6 +27,7 @@ public:
     QAction *system_reload;
     QMenu *system_loadSpecial;
       QAction *system_loadSpecial_bsxSlotted;
+      QAction *system_loadSpecial_xband;
       QAction *system_loadSpecial_bsx;
       QAction *system_loadSpecial_sufamiTurbo;
       QAction *system_loadSpecial_superGameBoy;
@@ -117,6 +118,7 @@ public slots:
   void loadCartridge();
   void loadBsxSlottedCartridge();
   void loadBsxCartridge();
+  void loadXBandCartridge();
   void loadSufamiTurboCartridge();
   void loadSuperGameBoyCartridge();
   void saveMemoryPack();

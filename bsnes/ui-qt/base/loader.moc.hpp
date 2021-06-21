@@ -24,6 +24,7 @@ public:
   void loadBsxCartridge(const char*, const char*);
   void loadSufamiTurboCartridge(const char*, const char*, const char*);
   void loadSuperGameBoyCartridge(const char*, const char*);
+  void loadXBandCartridge(const char *fileBase, const char *fileSlot1);
   LoaderWindow();
 
   void selectBaseCartridge(const char*);

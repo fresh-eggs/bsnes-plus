@@ -67,6 +67,7 @@ Configuration::Configuration() {
   attach(path.cheat = "", "path.cheat");
   attach(path.data  = "", "path.data");
   attach(path.bsx   = "", "path.bsx");
+  attach(path.xband = "", "path.xband");
   attach(path.st    = "", "path.st");
   attach(path.sgb   = "", "path.sgb");
   attach(path.shader = "", "path.shader");

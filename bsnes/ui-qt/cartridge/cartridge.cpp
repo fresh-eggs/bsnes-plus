@@ -1,5 +1,6 @@
 #include "../ui-base.hpp"
 #include <nall/bps/patch.hpp>
+
 Cartridge cartridge;
 
 //================
@@ -161,6 +162,29 @@ bool Cartridge::loadBsx(const char *base, const char *slot) {
   name = *slot
   ? notdir(nall::basename(slotAName))
   : notdir(nall::basename(baseName));
+
+  utility.modifySystemState(Utility::LoadCartridge);
+  return true;
+}
+
+bool Cartridge::loadXBand(const char *base, const char *slot) {
+  unload();
+      fprintf(stderr, 
+          "[*][cartridge.cpp:loadXband] Load Cartridge\n");
+  if(loadCartridge(baseName = base, cartridge.baseXml, SNES::memory::cartrom) == false) return false;
+    fprintf(stderr, 
+          "[*][cartridge.cpp:loadXband] Cartridge loaded! filename: %s\n", base);
+  SNES::cartridge.basename = nall::basename(baseName);
+
+  SNES::cartridge.load(SNES::Cartridge::Mode::XBand, lstring() << cartridge.baseXml << cartridge.slotAXml);
+
+  loadMemory(baseName, ".srm", SNES::memory::cartram);
+  loadMemory(baseName, ".rtc", SNES::memory::cartrtc);
+
+  fileName = baseName;
+  name = notdir(nall::basename(baseName));
+
+  application.currentRom = base;
 
   utility.modifySystemState(Utility::LoadCartridge);
   return true;
@@ -480,10 +504,14 @@ bool Cartridge::loadCartridge(string &filename, string &xml, SNES::MappedRAM &me
   uint8_t *data;
   unsigned size;
   audio.clear();
+    fprintf(stderr, 
+          "[*][cartridge.cpp:loadCartridge] Reader Load Start filename: %s\n", filename);
   if(reader.load(filename, data, size) == false) return false;
 
   patchApplied = "";
 
+  fprintf(stderr, 
+          "[*][cartridge.cpp:loadCartridge] Reader Load Success! filename: %s\n", filename);
   string bpsName(filepath(nall::basename(filename), config().path.patch), ".bps");
   string upsName(filepath(nall::basename(filename), config().path.patch), ".ups");
   string ipsName(filepath(nall::basename(filename), config().path.patch), ".ips");
@@ -502,6 +530,8 @@ bool Cartridge::loadCartridge(string &filename, string &xml, SNES::MappedRAM &me
   if((size & 0x7fff) == 512) memmove(data, data + 512, size -= 512);
   
   name = string(nall::basename(filename), ".xml");
+  char const *name_string = name;
+  fprintf(stderr, "[*][Cartridge::loadCartridge] name: %s\n", name_string);
   if(patchApplied == "" && file::exists(name)) {
     //prefer manually created XML cartridge mapping
     xml.readfile(name);
@@ -509,7 +539,8 @@ bool Cartridge::loadCartridge(string &filename, string &xml, SNES::MappedRAM &me
     //generate XML mapping from data via heuristics
     xml = SNESCartridge(data, size).xmlMemoryMap;
   }
-  
+  char const *xml_string = xml;
+  fprintf(stderr, "[*][cartridge.cpp:loadCartridge] XML: %s\n", xml_string);
   memory.map(data, size);
   return true;
 }
