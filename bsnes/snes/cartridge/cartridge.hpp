@@ -125,7 +125,7 @@ namespace memory {
   extern MappedRAM stArom, stAram;
   extern MappedRAM stBrom, stBram;
   extern MappedRAM gbrom, gbram, gbrtc;
-  extern MappedRAM xbandSram;
+  extern MappedRAM xbandSram, xbandRom;
 };
 
 extern Cartridge cartridge;

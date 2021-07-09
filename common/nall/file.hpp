@@ -237,6 +237,7 @@ namespace nall {
       if(buffer_offset != (file_offset & ~buffer_mask)) {
         buffer_flush();
         buffer_offset = file_offset & ~buffer_mask;
+        //fprintf(stderr, "[*][file.hpp][buffer_sync()] buffer_offset: 0x%x| file_offset: 0x%x| buffer_mask: 0x%x\n",buffer_offset, file_offset, buffer_mask);
         fseek(fp, buffer_offset, SEEK_SET);
         unsigned length = (buffer_offset + buffer_size) <= file_size ? buffer_size : (file_size & buffer_mask);
         if(length) unsigned unused = fread(buffer, 1, length, fp);

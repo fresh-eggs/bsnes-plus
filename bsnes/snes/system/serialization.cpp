@@ -82,6 +82,7 @@ void System::serialize_all(serializer &s) {
 //determines exactly how many bytes are needed to save state for this cartridge,
 //as amount varies per game (eg different RAM sizes, special chips, etc.)
 void System::serialize_init() {
+  fprintf(stderr, "[*][serialization.cpp][System::serialize_init] start\n");
   serializer s;
 
   unsigned signature = 0, version = 0, crc32 = 0;
@@ -95,6 +96,7 @@ void System::serialize_init() {
 
   serialize_all(s);
   serialize_size = s.size();
+  fprintf(stderr, "[*][serialization.cpp][System::serialize_init] end\n");
 }
 
 #endif

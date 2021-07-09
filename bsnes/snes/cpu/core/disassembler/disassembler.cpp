@@ -155,6 +155,7 @@ void CPUcore::disassemble_opcode_ex(CPUcore::Opcode &opcode, uint32 addr, bool e
 }
 
 void CPUcore::disassemble_opcode(char *output, uint32 addr, bool hclocks) {
+  fprintf(stderr, "[*][CPUcore::disassemble_opcode] enter\n");
   static reg24_t pc;
   char t[256];
   char *s = output;
@@ -174,6 +175,7 @@ void CPUcore::disassemble_opcode(char *output, uint32 addr, bool hclocks) {
   unsigned op_mode = cpuOpcodeInfo[op].mode;
   unsigned op_len  = SNESCPU::getOpcodeLength(a8, x8, op);
 
+  fprintf(stderr, "[*][CPUcore::disassemble_opcode] disassembled OPCODE: %-14s\n", SNESCPU::disassemble(addr, a8, x8, op, op0, op1, op2)());
   sprintf(t, "%-14s ", SNESCPU::disassemble(addr, a8, x8, op, op0, op1, op2)());
   strcat(s, t);
   
@@ -183,6 +185,7 @@ void CPUcore::disassemble_opcode(char *output, uint32 addr, bool hclocks) {
     sprintf(t, "[%.6x] ", decode(op_mode, op24, addr));
   strcat(s, t);
   
+  fprintf(stderr, "[*][CPUcore::disassemble_opcode] decoded OPCODE: [%.6x]\n", decode(op_mode, op24, addr));
   #undef op24
   #undef a8
   #undef x8

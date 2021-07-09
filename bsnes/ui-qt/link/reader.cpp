@@ -5,6 +5,7 @@ const char* Reader::direct_supported() {
 }
 
 bool Reader::direct_load(string &filename, uint8_t *&data, unsigned &size) {
+  fprintf(stderr, "[*][reader.cpp][direct_load] start\n");
   if(file::exists(filename) == false) return false;
 
   file fp;
@@ -18,15 +19,15 @@ bool Reader::direct_load(string &filename, uint8_t *&data, unsigned &size) {
 }
 
 Reader::Reader() {
-  if(open("snesreader")) {
-    supported = sym("snesreader_supported");
-    load = sym("snesreader_load");
-  }
+  //if(open("snesreader")) {
+  //  supported = sym("snesreader_supported");
+  //  load = sym("snesreader_load");
+  //}
 
-  if(!supported || !load) {
-    supported = { &Reader::direct_supported, this };
-    load = { &Reader::direct_load, this };
-  }
+  //if(!supported || !load) {
+  supported = { &Reader::direct_supported, this };
+  load = { &Reader::direct_load, this };
+  //}
 
   compressionList = supported();
   if(compressionList.length() > 0) compressionList = string() << " " << compressionList;

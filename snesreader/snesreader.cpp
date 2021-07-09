@@ -22,6 +22,7 @@ bsnesexport const char* snesreader_supported() {
 }
 
 bool snesreader_load_normal(const char *filename, uint8_t *&data, unsigned &size) {
+  fprintf(stderr, "[*][snesreader.cpp][snesreader_load_normal] start\n");
   file fp;
   if(fp.open(filename, file::mode::read) == false) return false;
   size = fp.size();
@@ -34,6 +35,7 @@ bool snesreader_load_normal(const char *filename, uint8_t *&data, unsigned &size
 #include "filechooser.cpp"
 
 bool snesreader_load_fex(string &filename, uint8_t *&data, unsigned &size) {
+  fprintf(stderr, "[*][snesreader.cpp][snesreader_load_fex] start\n");
   fex_t *fex;
   fex_open(&fex, filename);
   if(fex_done(fex)) { fex_close(fex); return false; }
@@ -141,7 +143,8 @@ bool snesreader_load_jma(const char *filename, uint8_t *&data, unsigned &size) {
 }
 
 bsnesexport bool snesreader_load(string &filename, uint8_t *&data, unsigned &size) {
-  if(file::exists(filename) == false) return false;
+  fprintf(stderr, "[*][snesreader.cpp][snesreader_load] start\n");
+  if(file::exists(filename) == false) return false; 
 
   bool success = false;
   if(striend(filename, ".zip")

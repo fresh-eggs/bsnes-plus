@@ -154,6 +154,7 @@ void System::power() {
   if(cartridge.bsxpack_type() == Cartridge::BSXPackType::FlashROM) bsxflash.power();
   if(cartridge.mode() == Cartridge::Mode::Bsx) bsxcart.power();
   if(cartridge.mode() == Cartridge::Mode::XBand) xband_cart.power();
+  if(cartridge.mode() == Cartridge::Mode::XBand) xband_base.power();
   if(cartridge.mode() == Cartridge::Mode::SuperGameBoy) supergameboy.power();
 
   if(cartridge.has_superfx()) superfx.power();

@@ -15,7 +15,7 @@ namespace memory {
   MappedRAM stArom, stAram;
   MappedRAM stBrom, stBram;
   MappedRAM gbrom, gbram, gbrtc;
-  MappedRAM xbandSram;
+  MappedRAM xbandSram, xbandRom;
 };
 
 Cartridge cartridge;
@@ -34,7 +34,7 @@ int Cartridge::rom_offset(unsigned addr) const {
 }
 
 void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
-  fprintf(stderr, "[*][Cartridge::load]\n");
+  fprintf(stderr, "[*][snes/cartridge/cartridge.cpp][Cartridge::load] start\n");
   mode = cartridge_mode;
   region = Region::NTSC;
   ram_size = 0;
@@ -61,6 +61,7 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
   has_msu1       = false;
   has_serial     = false;
 
+  fprintf(stderr, "[*][snes/cartridge/cartridge.cpp][Cartridge::load] call parse_xml\n");
   parse_xml(xml_list);
   print(xml_list[0], "\n\n");
 
@@ -116,6 +117,7 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
   memory::gbram.write_protect(false);
   memory::gbrtc.write_protect(false);
   memory::xbandSram.write_protect(false);
+  memory::xbandRom.write_protect(true);
 
   unsigned checksum = ~0;         foreach(n, memory::cartrom) checksum = crc32_adjust(checksum, n);
   if(memory::bsxpack.size() != 0) foreach(n, memory::bsxpack) checksum = crc32_adjust(checksum, n);
@@ -136,9 +138,11 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
   foreach(n, shahash) hash << hex<2>(n);
   sha256 = hash;
 
+  fprintf(stderr, "[*][snes/cartridge/cartridge.cpp][Cartridge::load] call bus.load_cart\n");
   bus.load_cart();
   system.serialize_init();
   loaded = true;
+  fprintf(stderr, "[*][snes/cartridge/cartridge.cpp][Cartridge::load] done\n");
 }
 
 void Cartridge::unload() {
@@ -155,6 +159,7 @@ void Cartridge::unload() {
   memory::gbram.reset();
   memory::gbrtc.reset();
   memory::xbandSram.reset();
+  memory::xbandRom.reset();
 
   if(loaded == false) return;
   bus.unload_cart();

@@ -52,7 +52,14 @@ void MappedRAM::write_protect(bool status) { write_protect_ = status; }
 uint8* MappedRAM::data() { return data_; }
 unsigned MappedRAM::size() const { return size_; }
 
-uint8 MappedRAM::read(unsigned addr) { return data_[addr]; }
+uint8 MappedRAM::read(unsigned addr) {
+  //fprintf(stderr, "[*]---------------------------------------------\n");
+  //fprintf(stderr, "[*][MappedRAM::read] data size: %x\n", size_);
+  //fprintf(stderr, "[*][MappedRAM::read] reading 0x%x\n", addr);
+  //fprintf(stderr, "[*][MappedRAM::read] data: 0x%x\n", data_[addr]);
+  //fprintf(stderr, "[*]---------------------------------------------\n");
+  return data_[addr];
+}
 void MappedRAM::write(unsigned addr, uint8 n) { if(!write_protect_ || debugger_access()) data_[addr] = n; }
 const uint8& MappedRAM::operator[](unsigned addr) const { return data_[addr]; }
 MappedRAM::MappedRAM() : data_(0), size_(0), write_protect_(false) {}

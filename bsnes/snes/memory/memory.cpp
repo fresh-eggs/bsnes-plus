@@ -88,6 +88,7 @@ void Bus::map(
   uint16 addr_lo, uint16 addr_hi,
   Memory &access, unsigned offset, unsigned size
 ) {
+  fprintf(stderr, "[*][memory.cpp][Bus::map] start\n");
   assert(bank_lo <= bank_hi);
   assert(addr_lo <= addr_hi);
 
@@ -145,6 +146,7 @@ void Bus::unload_cart() {
 }
 
 void Bus::map_reset() {
+  fprintf(stderr, "[*][memory.cpp][Bus::map_reset]\n");
   map(MapMode::Direct, 0x00, 0xff, 0x0000, 0xffff, memory::memory_unmapped);
   map(MapMode::Shadow, 0x00, 0x3f, MMIOAccess::Min, MMIOAccess::Max, memory::mmio);
   map(MapMode::Shadow, 0x80, 0xbf, MMIOAccess::Min, MMIOAccess::Max, memory::mmio);
@@ -152,6 +154,7 @@ void Bus::map_reset() {
 }
 
 void Bus::map_xml() {
+  fprintf(stderr, "[*][memory.cpp][Bus::map_xml]\n");
   foreach(m, cartridge.mapping) {
     if(m.memory && (memory::cartram.size() >= m.min_ram_size)) {
       map(m.mode, m.banklo, m.bankhi, m.addrlo, m.addrhi, *m.memory, m.offset, m.size);
@@ -162,15 +165,19 @@ void Bus::map_xml() {
 }
 
 void Bus::map_system() {
+  fprintf(stderr, "[*][memory.cpp][Bus::map_system] start\n");
   map(MapMode::Linear, 0x00, 0x3f, 0x0000, 0x1fff, memory::wram, 0x000000, 0x002000);
   map(MapMode::Linear, 0x80, 0xbf, 0x0000, 0x1fff, memory::wram, 0x000000, 0x002000);
   map(MapMode::Linear, 0x7e, 0x7f, 0x0000, 0xffff, memory::wram);
-  
+  fprintf(stderr, "[*][memory.cpp][Bus::map_system] done map\n");
+
+
   unsigned vram_size = 1<<16;
   if (SNES::PPU::SupportsVRAMExpansion) {
     vram_size = 1<<(16+max(0,min(2,config().vram_size)));
   }
   memory::vram.map(new uint8[vram_size], vram_size);
+  fprintf(stderr, "[*][memory.cpp][Bus::map_system] end\n");
 }
 
 void Bus::power() {

@@ -15,6 +15,7 @@ void Cartridge::parse_xml(const lstring &list) {
   } else if(mode == Mode::SuperGameBoy) {
     parse_xml_gameboy(list[1]);
   }else if(mode == Mode::XBand) {
+    fprintf(stderr, "[*][Cartridge::parse_xml] call parse_xml_xband\n");
     parse_xml_xband(list[1]);
   }
 
@@ -26,6 +27,8 @@ void Cartridge::parse_xml_cartridge(const char *data) {
   fprintf(stderr, "[*][Cartridge::parse_xml_cartridge] enter\n");
   xml_element document = xml_parse(data);
   fprintf(stderr, "[*][Cartridge::parse_xml_cartridge] doc size %d\n", document.element.size());
+  // ensure we actually parsed the XML and collected some nodes from the file to build a legit
+  // xml document.
   if(document.element.size() == 0) return;
 
   foreach(head, document.element) {
@@ -334,22 +337,12 @@ void Cartridge::xml_parse_xband(xml_element &root) {
   if(mode != Mode::XBand) return;
   
   foreach(node, root.element) {
-    if (node.name == "rom") {
-      fprintf(stderr, "[*][Cartridge::xml_parse_xband] rom\n");
-      foreach(leaf, node.element) {
-        if(leaf.name == "map") {
-          Mapping m(xband_cart);
-          foreach(attr, leaf.attribute) {
-            if(attr.name == "address") xml_parse_address(m, attr.content);
-          }
-          mapping.append(m);
-        }
-      }
+    if (node.name == "false") {
+      xml_parse_memory(node, memory::cartrom);
     } else if(node.name == "ram") {
-      fprintf(stderr, "[*][Cartridge::xml_parse_xband] ram\n");
       xml_parse_memory(node, memory::xbandSram);
-    } else if(node.name == "mcu") {
-      fprintf(stderr, "[*][Cartridge::xml_parse_xband] mcu\n");
+    } else if(node.name == "rom") {
+      //fprintf(stderr, "[*][Cartridge::xml_parse_xband] mcu\n");
       foreach(leaf, node.element) {
         if(leaf.name == "map") {
           Mapping m(xband_cart);

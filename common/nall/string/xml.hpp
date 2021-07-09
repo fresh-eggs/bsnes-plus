@@ -147,6 +147,7 @@ inline void xml_element::parse_head(string data) {
 }
 
 inline bool xml_element::parse_body(const char *&data) {
+  fprintf(stderr, "[*][xml.hpp][parse_body] start, data: %s\n", data);
   while(true) {
     if(!*data) return false;
     if(*data++ != '<') continue;
@@ -194,11 +195,13 @@ inline bool xml_element::parse_body(const char *&data) {
 
     parse_head(tag);
     if(self_terminating) return true;
-
+    
+    fprintf(stderr, "[*][xml.hpp:199][parse_body] Parsing tag: %s\n", (const char*)tag);
     while(*data) {
       unsigned index = element.size();
       xml_element node;
       if(node.parse_body(data) == false) {
+        fprintf(stderr, "[*][xml.hpp:204][parse_body] Recursive pasrse_body was false\n: data: %s\n node: %s\n",data, (const char*)node.content);
         if(*data == '/') {
           signed length = data - content_begin - 1;
           if(length > 0) content = substr(content_begin, 0, length);
@@ -220,6 +223,7 @@ inline bool xml_element::parse_body(const char *&data) {
           return true;
         }
       } else {
+        fprintf(stderr, "[*][xml.hpp:225][parse_body] Appending node:\n %s\n", (const char*)node.content);
         element.append(node);
       }
     }
@@ -240,15 +244,19 @@ inline bool xml_validate(xml_element &document) {
   return true;
 }
 
+// parses the XML document you pass and appends nodes to the element array of self.
 inline xml_element xml_parse(const char *data) {
+  fprintf(stderr, "[*][xml.hpp][xml_parse] start, data: %s\n", data);
   xml_element self;
-
+  
   try {
     while(*data) {
       xml_element node;
       if(node.parse_body(data) == false) {
+        fprintf(stderr, "[*][xml.hpp][xml_parse] parse_body was false\n");
         break;
       } else {
+        fprintf(stderr, "[*][xml.hpp][xml_parse] parse_body was true\n");
         self.element.append(node);
       }
     }

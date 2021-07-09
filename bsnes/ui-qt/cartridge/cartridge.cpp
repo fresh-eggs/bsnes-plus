@@ -169,11 +169,10 @@ bool Cartridge::loadBsx(const char *base, const char *slot) {
 
 bool Cartridge::loadXBand(const char *base, const char *slot) {
   unload();
-      fprintf(stderr, 
-          "[*][cartridge.cpp:loadXband] Load Cartridge\n");
+  fprintf(stderr, "[*][cartridge.cpp:loadXband] Load Cartridge\n");
   if(loadCartridge(baseName = base, cartridge.baseXml, SNES::memory::cartrom) == false) return false;
-    fprintf(stderr, 
-          "[*][cartridge.cpp:loadXband] Cartridge loaded! filename: %s\n", base);
+  loadCartridge(slotAName = slot, cartridge.slotAXml, SNES::memory::xbandRom);
+  fprintf(stderr, "[*][cartridge.cpp:loadXband] Cartridge loaded! filename: %s\n", base);
   SNES::cartridge.basename = nall::basename(baseName);
 
   SNES::cartridge.load(SNES::Cartridge::Mode::XBand, lstring() << cartridge.baseXml << cartridge.slotAXml);
@@ -181,10 +180,32 @@ bool Cartridge::loadXBand(const char *base, const char *slot) {
   loadMemory(baseName, ".srm", SNES::memory::cartram);
   loadMemory(baseName, ".rtc", SNES::memory::cartrtc);
 
-  fileName = baseName;
+  fileName = slotAName;
   name = notdir(nall::basename(baseName));
 
   application.currentRom = base;
+
+  utility.modifySystemState(Utility::LoadCartridge);
+  return true;
+}
+
+bool Cartridge::loadSuperGameBoy(const char *base, const char *slot) {
+  unload();
+  if(loadCartridge(baseName = base, cartridge.baseXml, SNES::memory::cartrom) == false) return false;
+  loadCartridge(slotAName = slot, cartridge.slotAXml, SNES::memory::gbrom);
+  SNES::cartridge.basename = nall::basename(baseName);
+
+  SNES::cartridge.load(SNES::Cartridge::Mode::SuperGameBoy,
+    lstring() << cartridge.baseXml << cartridge.slotAXml);
+
+  loadMemory(slotAName, ".sav", SNES::memory::gbram);
+  loadMemory(slotBName, ".rtc", SNES::memory::gbrtc);
+
+  fileName = slotAName;
+  name = *slot
+  ? notdir(nall::basename(slotAName))
+  : notdir(nall::basename(baseName));
+  application.currentRom = fileName;
 
   utility.modifySystemState(Utility::LoadCartridge);
   return true;
@@ -208,28 +229,6 @@ bool Cartridge::loadSufamiTurbo(const char *base, const char *slotA, const char 
   else if(!*slotB) name = notdir(nall::basename(slotAName));
   else if(!*slotA) name = notdir(nall::basename(slotBName));
   else name = notdir(nall::basename(slotAName)) << " + " << notdir(nall::basename(slotBName));
-  application.currentRom = fileName;
-
-  utility.modifySystemState(Utility::LoadCartridge);
-  return true;
-}
-
-bool Cartridge::loadSuperGameBoy(const char *base, const char *slot) {
-  unload();
-  if(loadCartridge(baseName = base, cartridge.baseXml, SNES::memory::cartrom) == false) return false;
-  loadCartridge(slotAName = slot, cartridge.slotAXml, SNES::memory::gbrom);
-  SNES::cartridge.basename = nall::basename(baseName);
-
-  SNES::cartridge.load(SNES::Cartridge::Mode::SuperGameBoy,
-    lstring() << cartridge.baseXml << cartridge.slotAXml);
-
-  loadMemory(slotAName, ".sav", SNES::memory::gbram);
-  loadMemory(slotBName, ".rtc", SNES::memory::gbrtc);
-
-  fileName = slotAName;
-  name = *slot
-  ? notdir(nall::basename(slotAName))
-  : notdir(nall::basename(baseName));
   application.currentRom = fileName;
 
   utility.modifySystemState(Utility::LoadCartridge);
@@ -504,14 +503,18 @@ bool Cartridge::loadCartridge(string &filename, string &xml, SNES::MappedRAM &me
   uint8_t *data;
   unsigned size;
   audio.clear();
-    fprintf(stderr, 
-          "[*][cartridge.cpp:loadCartridge] Reader Load Start filename: %s\n", filename);
+  fprintf(stderr, "[*][cartridge.cpp:loadCartridge] Reader Load Start filename: %s\n", filename);
   if(reader.load(filename, data, size) == false) return false;
+  
+  FILE * pFile;
+  pFile = fopen ("xband_rom", "wb");
+  fprintf(stderr, "[*][DUMPING ROM] size: 0x%x | %d\n", sizeof(data), size);
+  fwrite (data , sizeof(char), size, pFile);
+  fclose (pFile);
 
   patchApplied = "";
 
-  fprintf(stderr, 
-          "[*][cartridge.cpp:loadCartridge] Reader Load Success! filename: %s\n", filename);
+  fprintf(stderr, "[*][cartridge.cpp:loadCartridge] Reader Load Success! filename: %s\n", filename);
   string bpsName(filepath(nall::basename(filename), config().path.patch), ".bps");
   string upsName(filepath(nall::basename(filename), config().path.patch), ".ups");
   string ipsName(filepath(nall::basename(filename), config().path.patch), ".ips");

@@ -8,7 +8,7 @@ public:
   void power();
   void reset();
   void enable();
-  void Enter();
+  static void Enter();
   void enter();
 
   uint8 memory_access(bool write, Memory &memory, unsigned addr, uint8 data);
@@ -23,9 +23,6 @@ public:
   void mmio_write(unsigned addr, uint8 data);
 
   void serialize(serializer&);
-
-  XBANDBase();
-  ~XBANDBase();
 
 private:
   uint8 mapset;

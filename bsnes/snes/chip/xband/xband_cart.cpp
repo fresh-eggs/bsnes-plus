@@ -29,6 +29,7 @@ void XBANDCart::unload() {
 
 void XBANDCart::power() {
 	fprintf(stderr, "[*][xband_cart.cpp:power] enter \n");
+  bus.map(Bus::MapMode::Linear, 0x7d, 0xe0, 0x0000, 0x7fff, memory::xbandSram);
   //bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x8000, 0xffff, memory::xbandSram);
   //bus.map(Bus::MapMode::Direct, 0x40, 0x7d, 0x0000, 0xffff, memory::xbandSram);
   //bus.map(Bus::MapMode::Direct, 0xc0, 0xdf, 0x0000, 0xffff, memory::xbandSram);
@@ -48,11 +49,62 @@ void XBANDCart::reset() {
 }
 
 uint8 XBANDCart::read(unsigned addr) {
-  fprintf(stderr, "[*][xband_cart.cpp:read] addr: 0x%x\n", addr);
-  return memory::cartrom.read(addr);
+  if(within<0x00, 0x1f, 0x8000, 0xffff>(addr)) {
+    addr = (addr & 0x3f0000 >> 1) | (addr & 0xffff);
+    addr = bus.mirror(addr, memory::cartrom.size());
+    //addr = (addr & 0x0fffff);
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    //fprintf(stderr, "[*][xband_cart.cpp:read][X] addr: 0x%x\n", addr);
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    return memory::cartrom.read(addr);
+  }
+  if(within<0x80, 0x9f, 0x8000, 0xffff>(addr)) {
+    addr = ((addr & 0x3f0000 >> 1) | (addr & 0xffff));
+    addr = bus.mirror(addr, memory::cartrom.size());
+    //addr = (addr & 0x0fffff);
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    //fprintf(stderr, "[*][xband_cart.cpp:read][X] addr: 0x%x\n", addr);
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    return memory::cartrom.read(addr);
+  }
+  
+  if(within<0x40, 0x7d, 0x0000, 0xffff>(addr)) {
+    addr = ((addr & 0x3f0000 >> 1) | (addr & 0xffff));
+    addr = bus.mirror(addr, memory::cartrom.size());
+    //addr = (addr & 0x0fffff);
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    //fprintf(stderr, "[*][xband_cart.cpp:read][X] addr: 0x%x\n", addr);
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    return memory::cartrom.read(addr);
+  }
+  if(within<0xc0, 0xdf, 0x0000, 0xffff>(addr)) {
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    //fprintf(stderr, "[*][xband_cart.cpp:read][!] addr: 0x%x\n", addr);
+    //addr = (addr & 0x4FFFFF); //make offset into xband rom at 0 for access into data_
+    addr = ((addr & 0x3f0000 >> 1) | (addr & 0xffff));
+    addr = bus.mirror(addr, memory::cartrom.size());
+    //addr = (addr & 0x0fffff);
+    //fprintf(stderr, "[*][xband_cart.cpp:read][!] addr_translated: 0x%x\n", addr);
+    //fprintf(stderr, "[*]---------------------------------------------\n");
+    return memory::cartrom.read(addr);
+  }
+
+  ////fprintf(stderr, "[*]---------------------------------------------\n");
+  ////fprintf(stderr, "[*][xband_cart.cpp:read][!] addr: 0x%x\n", addr);
+  
+  ////fprintf(stderr, "[*][xband_cart.cpp:read][!] addr_translated: 0x%x\n", addr);
+  ////fprintf(stderr, "[*]---------------------------------------------\n"); 
+  //fprintf(stderr, "[*]---------------------------------------------\n");
+  fprintf(stderr, "[*][xband_cart.cpp:read][regular read] addr: 0x%x\n", addr);
+  //fprintf(stderr, "[*]---------------------------------------------\n");
+  
+  return -1;
 }
 
 void XBANDCart::write(unsigned addr, uint8 data) {
+  addr = ((addr & 0x3f0000 >> 1) | (addr & 0xffff));
+  addr = bus.mirror(addr, memory::cartrom.size());
+  //addr = (addr & 0x0fffff); //make offset into xband rom at 0 for access into data_
   fprintf(stderr, "[*][xband_cart.cpp:write] addr: 0x%x, data: %d\n", addr, data);
   memory::cartrom.write(addr, data);
 }

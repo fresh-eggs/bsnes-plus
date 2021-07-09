@@ -35,6 +35,7 @@ public:
     TypeBsxSlotted,
     TypeBsxBios,
     TypeBsx,
+    TypeXBand,
     TypeSufamiTurboBios,
     TypeSufamiTurbo,
     TypeSuperGameBoy1Bios,
@@ -62,6 +63,7 @@ public:
     BSXROM,
     STROM,
     Cx4ROM,
+    XBANDROM,
   };
 
   enum DSP1MemoryMapper {
@@ -99,7 +101,9 @@ public:
 };
 
 SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {
+  fprintf(stderr, "[*][cartride.hpp] SNESCartridge::SNESCartridge\n");
   read_header(data, size);
+  type = TypeXBand;
 
   string xml = "<?xml version='1.0' encoding='UTF-8'?>\n";
 
@@ -142,6 +146,38 @@ SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {
     xml << "PAL";
   }
   xml << "'>\n";
+
+  if(type == TypeXBand) {
+    fprintf(stderr, "[*][cartride.hpp:xmlMemoryMap] TypeXBand\n");
+    //xml << "  <rom>\n";
+    //xml << "    <map mode='direct' address='00-3f:8000-ffff'/>\n";
+    //xml << "    <map mode='direct' address='80-bf:8000-ffff'/>\n";
+    //xml << "    <map mode='direct' address='40-7d:0000-ffff'/>\n";
+    //xml << "    <map mode='direct' address='c0-df:0000-ffff'/>\n";
+    //xml << "  </rom>\n";
+    //xml << "  <ram size='10000'>\n";
+    //xml << "    <map mode='linear' address='e0-e0:0000-ffff'/>\n";
+    //xml << "  </ram>\n";
+    xml << "  <xband>\n";
+    xml << "    <rom>\n";
+    xml << "      <map mode='direct' address='00-3f:8000-ffff'/>\n";
+    xml << "      <map mode='direct' address='80-bf:8000-ffff'/>\n";
+    xml << "      <map mode='direct' address='40-7d:0000-ffff'/>\n";
+    xml << "      <map mode='direct' address='c0-df:0000-ffff'/>\n";
+    //xml << "      <map mode='linear' address='d0-df:0000-ffff'/>\n";
+    //xml << "      <map mode='shadow' address='50-5f:0000-ffff'/>\n";
+    xml << "    </rom>\n";
+    xml << "    <ram size='10000'>\n";
+    xml << "      <map mode='linear' address='e0-e0:0000-ffff'/>\n";
+    xml << "    </ram>\n";
+    xml << "    <mmio>\n";
+    xml << "      <map mode='direct' address='e0-ff:0000-ffff'/>\n";
+    xml << "    </mmio>\n";
+    xml << "  </xband>\n";
+    xml << "</cartridge>\n";
+    xmlMemoryMap = xml;
+    return;
+  }
 
   if(mapper == SGBROM) {
     xml << "  <rom>\n";
@@ -508,6 +544,32 @@ SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {
     xml << "  </setarisc>\n";
   }
 
+  if(type == TypeXBand) {
+    fprintf(stderr, "[*][cartride.hpp:xmlMemoryMap] TypeXBand\n");
+    xml << "  <xband>\n";
+    xml << "    <rom>\n";
+    xml << "      <map mode='linear' address='d0-df:0000-ffff'/>\n";
+    xml << "      <map mode='shadow' address='50-5f:0000-ffff'/>\n";
+    xml << "    </rom>\n";
+    xml << "    <rom_bsx_2>\n";
+    xml << "      <map mode='direct' address='00-3f:8000-ffff'/>\n";
+    xml << "      <map mode='direct' address='80-bf:8000-ffff'/>\n";
+    xml << "      <map mode='direct' address='40-7d:0000-ffff'/>\n";
+    xml << "      <map mode='direct' address='c0-df:0000-ffff'/>\n";
+    xml << "    </rom_bsx_2>\n";
+    xml << "    <mcu>\n";
+    xml << "      <map mode='linear' address='d0-df:0000-ffff'/>\n";
+    xml << "      <map mode='shadow' address='50-5f:0000-ffff'/>\n";
+    xml << "    </mcu>\n";
+    xml << "    <ram size='10000'>\n";
+    xml << "      <map mode='linear' address='e0-e0:0000-ffff'/>\n";
+    xml << "    </ram>\n";
+    xml << "    <mmio>\n";
+    xml << "      <map address='fb-ff:c000-c1bf'/>\n";
+    xml << "    </mmio>\n";
+    xml << "  </xband>\n";
+  }
+
   xml << "</cartridge>\n";
   xmlMemoryMap = xml;
 }
@@ -688,7 +750,6 @@ void SNESCartridge::read_header(const uint8_t *data, unsigned size) {
   } else {
     //standard cart
     type = TypeNormal;
-
     if(index == 0x7fc0) {
       mapper = LoROM;
     } else if(index == 0xffc0) {
