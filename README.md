@@ -3,6 +3,9 @@
 bsnes-plus (or bsnes+) is a fork of bsnes (based on bsnes-classic) intended to
 introduce some new features and improvements, mostly aimed at debugging.
 
+This fork of bsnes+ contains my ongoing work to add support for the [XBAND Modem](https://en.wikipedia.org/wiki/XBAND).
+
+
 ## What's new
 
 - Improved debugger UI with register editing
