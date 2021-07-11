@@ -1,0 +1,148 @@
+[1mdiff --git a/bsnes/Makefile b/bsnes/Makefile[m
+[1mindex 0bc6d76..1b87705 100644[m
+[1m--- a/bsnes/Makefile[m
+[1m+++ b/bsnes/Makefile[m
+[36m@@ -6,7 +6,7 @@[m [mifeq ($(ui),)[m
+   ui := ui-qt[m
+ endif[m
+ [m
+[31m-profile := accuracy[m
+[32m+[m[32mprofile := compatibility[m
+ ifeq ($(profile),)[m
+   profile := compatibility[m
+   ifeq ($(out),)[m
+[1mdiff --git a/bsnes/snes/chip/xband/xband.hpp b/bsnes/snes/chip/xband/xband.hpp[m
+[1mindex 14b0157..31ceff1 100644[m
+[1m--- a/bsnes/snes/chip/xband/xband.hpp[m
+[1m+++ b/bsnes/snes/chip/xband/xband.hpp[m
+[36m@@ -1,4 +1,4 @@[m
+[31m-class XBANDBase : public Coprocessor, public MMIO  {[m
+[32m+[m[32mclass XBANDBase : public Coprocessor, public Memory  {[m
+ public:[m
+   MappedRAM sram;[m
+ [m
+[36m@@ -22,6 +22,9 @@[m [mpublic:[m
+   uint8 mmio_read(unsigned addr);[m
+   void mmio_write(unsigned addr, uint8 data);[m
+ [m
+[32m+[m[32m  uint8 read(unsigned addr);[m
+[32m+[m[32m  void write(unsigned addr, uint8 data);[m
+[32m+[m
+   void serialize(serializer&);[m
+ [m
+ private:[m
+[1mdiff --git a/bsnes/snes/chip/xband/xband_base.cpp b/bsnes/snes/chip/xband/xband_base.cpp[m
+[1mindex 1b907df..941d94b 100644[m
+[1m--- a/bsnes/snes/chip/xband/xband_base.cpp[m
+[1m+++ b/bsnes/snes/chip/xband/xband_base.cpp[m
+[36m@@ -19,7 +19,8 @@[m [mvoid XBANDBase::init() {[m
+ [m
+ void XBANDBase::enable() {[m
+ 	fprintf(stderr, "[*][XBANDBase][enable_start]\n");[m
+[31m-  memory::mmio.map(0xc180, 0xc1bf, *this);[m
+[32m+[m[32m  //memory::mmio.map(0xc180, 0xc1bf, *this);[m
+[32m+[m[32m  bus.map(Bus::MapMode::Direct, 0xe0, 0xff, 0x0000, 0xffff, *this);[m
+   fprintf(stderr, "[*][XBANDBase][enable_end]\n");[m
+ }[m
+ [m
+[36m@@ -40,8 +41,8 @@[m [mvoid XBANDBase::unload() {[m
+ }[m
+ [m
+ [m
+[31m-uint8 XBANDBase::mmio_read(unsigned addr) {  [m
+[31m-	fprintf(stderr, "[*][xband_cart.cpp:mmimo_read] addr: 0x%x\n", addr);[m
+[32m+[m[32muint8 XBANDBase::read(unsigned addr) {[m[41m  [m
+[32m+[m	[32m//fprintf(stderr, "[*][xband_base.cpp:mmimo_read] addr: 0x%x\n", addr);[m
+   if(within<0xe0, 0xfa, 0x0000, 0xffff>(addr)[m
+   || within<0xfb, 0xfb, 0x0000, 0xbfff>(addr)[m
+   || within<0xfc, 0xff, 0x0000, 0xffff>(addr)[m
+[36m@@ -118,8 +119,8 @@[m [muint8 XBANDBase::mmio_read(unsigned addr) {[m
+   return 0xff;[m
+ }[m
+ [m
+[31m-void XBANDBase::mmio_write(unsigned addr, uint8 data) {[m
+[31m-[m
+[32m+[m[32mvoid XBANDBase::write(unsigned addr, uint8 data) {[m
+[32m+[m[32m  //fprintf(stderr, "[*][xband_base][mimo_write] addr: 0x%x | data: 0x%x\n", addr, data);[m
+ 	if(within<0xe0, 0xfa, 0x0000, 0xffff>(addr)) {[m
+ 	  addr = (addr & 0x1fffff);[m
+ 		addr = bus.mirror(addr, memory::xbandSram.size());[m
+[1mdiff --git a/bsnes/snes/chip/xband/xband_cart.cpp b/bsnes/snes/chip/xband/xband_cart.cpp[m
+[1mindex 1ed0ebf..d4e491f 100644[m
+[1m--- a/bsnes/snes/chip/xband/xband_cart.cpp[m
+[1m+++ b/bsnes/snes/chip/xband/xband_cart.cpp[m
+[36m@@ -29,13 +29,17 @@[m [mvoid XBANDCart::unload() {[m
+ [m
+ void XBANDCart::power() {[m
+ 	fprintf(stderr, "[*][xband_cart.cpp:power] enter \n");[m
+[31m-  bus.map(Bus::MapMode::Linear, 0x7d, 0xe0, 0x0000, 0x7fff, memory::xbandSram);[m
+[31m-  //bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x8000, 0xffff, memory::xbandSram);[m
+[31m-  //bus.map(Bus::MapMode::Direct, 0x40, 0x7d, 0x0000, 0xffff, memory::xbandSram);[m
+[31m-  //bus.map(Bus::MapMode::Direct, 0xc0, 0xdf, 0x0000, 0xffff, memory::xbandSram);[m
+[32m+[m[32m  bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x8000, 0xffff, *this);[m
+[32m+[m[32m  bus.map(Bus::MapMode::Direct, 0x40, 0x7d, 0x0000, 0xffff, *this);[m
+[32m+[m[32m  bus.map(Bus::MapMode::Direct, 0x80, 0xbf, 0x8000, 0xffff, *this);[m
+[32m+[m[32m  bus.map(Bus::MapMode::Direct, 0xc0, 0xdf, 0x0000, 0xffff, *this);[m
+[32m+[m[41m  [m
+   //Force MMIO Map[m
+   //bus.map(Bus::MapMode::Direct, 0xe0, 0xff, 0x0000, 0xffff, memory::xbandSram);[m
+   [m
+[32m+[m[32m  //map SRAM[m
+[32m+[m[32m  //bus.map(Bus::MapMode::Linear, 0x7d, 0xe0, 0x0000, 0x7fff, memory::xbandSram);[m
+[32m+[m
+   //bus.map(Bus::MapMode::Linear, 0x80, 0xbf, 0x8000, 0xffff, memory::cartrom);[m
+   fprintf(stderr, "[*][xband_cart.cpp:power] exit \n");[m
+   reset();[m
+[36m@@ -95,7 +99,7 @@[m [muint8 XBANDCart::read(unsigned addr) {[m
+   ////fprintf(stderr, "[*][xband_cart.cpp:read][!] addr_translated: 0x%x\n", addr);[m
+   ////fprintf(stderr, "[*]---------------------------------------------\n"); [m
+   //fprintf(stderr, "[*]---------------------------------------------\n");[m
+[31m-  fprintf(stderr, "[*][xband_cart.cpp:read][regular read] addr: 0x%x\n", addr);[m
+[32m+[m[32m  //fprintf(stderr, "[*][xband_cart.cpp:read][regular read] addr: 0x%x\n", addr);[m
+   //fprintf(stderr, "[*]---------------------------------------------\n");[m
+   [m
+   return -1;[m
+[36m@@ -105,7 +109,7 @@[m [mvoid XBANDCart::write(unsigned addr, uint8 data) {[m
+   addr = ((addr & 0x3f0000 >> 1) | (addr & 0xffff));[m
+   addr = bus.mirror(addr, memory::cartrom.size());[m
+   //addr = (addr & 0x0fffff); //make offset into xband rom at 0 for access into data_[m
+[31m-  fprintf(stderr, "[*][xband_cart.cpp:write] addr: 0x%x, data: %d\n", addr, data);[m
+[32m+[m[32m  //fprintf(stderr, "[*][xband_cart.cpp:write] addr: 0x%x, data: %d\n", addr, data);[m
+   memory::cartrom.write(addr, data);[m
+ }[m
+ [m
+[1mdiff --git a/common/nall/snes/cartridge.hpp b/common/nall/snes/cartridge.hpp[m
+[1mindex f894e6b..7111229 100644[m
+[1m--- a/common/nall/snes/cartridge.hpp[m
+[1m+++ b/common/nall/snes/cartridge.hpp[m
+[36m@@ -103,7 +103,7 @@[m [mpublic:[m
+ SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {[m
+   fprintf(stderr, "[*][cartride.hpp] SNESCartridge::SNESCartridge\n");[m
+   read_header(data, size);[m
+[31m-  type = TypeXBand;[m
+[32m+[m[32m  //type = TypeXBand;[m
+ [m
+   string xml = "<?xml version='1.0' encoding='UTF-8'?>\n";[m
+ [m
+[1mdiff --git a/notes b/notes[m
+[1mindex 86075eb..3893aed 100644[m
+[1m--- a/notes[m
+[1m+++ b/notes[m
+[36m@@ -394,6 +394,17 @@[m [mif it is actually ending up in snesreader_load_normal, why isn't changing the 0x[m
+ afaict, everything required for the xband_base coprocessor to work is now present in the code base. The translation of requests into the xband maped memory should reflect what was done in the bsx-2 implementation.[m
+ [m
+ [m
+[32m+[m[32m----[m
+[32m+[m
+[32m+[m[32m- you haven't got much farther, the emulator is now crashing in a new place since attempting to more closely match what mapping were being forced in the bsx-2 in the XML mapping in the bsnes-plus (done by moving the ram mapping in xband so you can map it)[m
+[32m+[m
+[32m+[m[32m- continue to attempt to debug the current segfault.[m
+[32m+[m
+[32m+[m[32m- might be worth burning everything down and starting the implementation from mostly scract? Either that or whiteboard the current state of the implementation.[m
+[32m+[m
+[32m+[m[32m- you could also reach out for help on the nesdev forums, anyone who is willing to try and get xband implementation working on bsnes-plus[m
+[32m+[m
+[32m+[m[32m- oh btw now the emulator looks to be arbitrarily crashing at the same system bug mapping of wram section again... fun[m
+ [m
+ [m
+ [m

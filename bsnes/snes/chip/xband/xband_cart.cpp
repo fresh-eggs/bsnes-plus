@@ -29,13 +29,17 @@ void XBANDCart::unload() {
 
 void XBANDCart::power() {
 	fprintf(stderr, "[*][xband_cart.cpp:power] enter \n");
-  bus.map(Bus::MapMode::Linear, 0x7d, 0xe0, 0x0000, 0x7fff, memory::xbandSram);
-  //bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x8000, 0xffff, memory::xbandSram);
-  //bus.map(Bus::MapMode::Direct, 0x40, 0x7d, 0x0000, 0xffff, memory::xbandSram);
-  //bus.map(Bus::MapMode::Direct, 0xc0, 0xdf, 0x0000, 0xffff, memory::xbandSram);
+  bus.map(Bus::MapMode::Direct, 0x00, 0x3f, 0x8000, 0xffff, *this);
+  bus.map(Bus::MapMode::Direct, 0x40, 0x7d, 0x0000, 0xffff, *this);
+  bus.map(Bus::MapMode::Direct, 0x80, 0xbf, 0x8000, 0xffff, *this);
+  bus.map(Bus::MapMode::Direct, 0xc0, 0xdf, 0x0000, 0xffff, *this);
+  
   //Force MMIO Map
   //bus.map(Bus::MapMode::Direct, 0xe0, 0xff, 0x0000, 0xffff, memory::xbandSram);
   
+  //map SRAM
+  //bus.map(Bus::MapMode::Linear, 0x7d, 0xe0, 0x0000, 0x7fff, memory::xbandSram);
+
   //bus.map(Bus::MapMode::Linear, 0x80, 0xbf, 0x8000, 0xffff, memory::cartrom);
   fprintf(stderr, "[*][xband_cart.cpp:power] exit \n");
   reset();
@@ -95,7 +99,7 @@ uint8 XBANDCart::read(unsigned addr) {
   ////fprintf(stderr, "[*][xband_cart.cpp:read][!] addr_translated: 0x%x\n", addr);
   ////fprintf(stderr, "[*]---------------------------------------------\n"); 
   //fprintf(stderr, "[*]---------------------------------------------\n");
-  fprintf(stderr, "[*][xband_cart.cpp:read][regular read] addr: 0x%x\n", addr);
+  //fprintf(stderr, "[*][xband_cart.cpp:read][regular read] addr: 0x%x\n", addr);
   //fprintf(stderr, "[*]---------------------------------------------\n");
   
   return -1;
@@ -105,7 +109,7 @@ void XBANDCart::write(unsigned addr, uint8 data) {
   addr = ((addr & 0x3f0000 >> 1) | (addr & 0xffff));
   addr = bus.mirror(addr, memory::cartrom.size());
   //addr = (addr & 0x0fffff); //make offset into xband rom at 0 for access into data_
-  fprintf(stderr, "[*][xband_cart.cpp:write] addr: 0x%x, data: %d\n", addr, data);
+  //fprintf(stderr, "[*][xband_cart.cpp:write] addr: 0x%x, data: %d\n", addr, data);
   memory::cartrom.write(addr, data);
 }
 

@@ -19,7 +19,8 @@ void XBANDBase::init() {
 
 void XBANDBase::enable() {
 	fprintf(stderr, "[*][XBANDBase][enable_start]\n");
-  memory::mmio.map(0xc180, 0xc1bf, *this);
+  //memory::mmio.map(0xc180, 0xc1bf, *this);
+  bus.map(Bus::MapMode::Direct, 0xe0, 0xff, 0x0000, 0xffff, *this);
   fprintf(stderr, "[*][XBANDBase][enable_end]\n");
 }
 
@@ -40,8 +41,8 @@ void XBANDBase::unload() {
 }
 
 
-uint8 XBANDBase::mmio_read(unsigned addr) {  
-	fprintf(stderr, "[*][xband_cart.cpp:mmimo_read] addr: 0x%x\n", addr);
+uint8 XBANDBase::read(unsigned addr) {  
+	//fprintf(stderr, "[*][xband_base.cpp:mmimo_read] addr: 0x%x\n", addr);
   if(within<0xe0, 0xfa, 0x0000, 0xffff>(addr)
   || within<0xfb, 0xfb, 0x0000, 0xbfff>(addr)
   || within<0xfc, 0xff, 0x0000, 0xffff>(addr)
@@ -118,8 +119,8 @@ uint8 XBANDBase::mmio_read(unsigned addr) {
   return 0xff;
 }
 
-void XBANDBase::mmio_write(unsigned addr, uint8 data) {
-
+void XBANDBase::write(unsigned addr, uint8 data) {
+  //fprintf(stderr, "[*][xband_base][mimo_write] addr: 0x%x | data: 0x%x\n", addr, data);
 	if(within<0xe0, 0xfa, 0x0000, 0xffff>(addr)) {
 	  addr = (addr & 0x1fffff);
 		addr = bus.mirror(addr, memory::xbandSram.size());

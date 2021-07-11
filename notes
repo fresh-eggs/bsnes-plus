@@ -394,6 +394,17 @@ if it is actually ending up in snesreader_load_normal, why isn't changing the 0x
 afaict, everything required for the xband_base coprocessor to work is now present in the code base. The translation of requests into the xband maped memory should reflect what was done in the bsx-2 implementation.
 
 
+----
+
+- you haven't got much farther, the emulator is now crashing in a new place since attempting to more closely match what mapping were being forced in the bsx-2 in the XML mapping in the bsnes-plus (done by moving the ram mapping in xband so you can map it)
+
+- continue to attempt to debug the current segfault.
+
+- might be worth burning everything down and starting the implementation from mostly scract? Either that or whiteboard the current state of the implementation.
+
+- you could also reach out for help on the nesdev forums, anyone who is willing to try and get xband implementation working on bsnes-plus
+
+- oh btw now the emulator looks to be arbitrarily crashing at the same system bug mapping of wram section again... fun
 
 
 

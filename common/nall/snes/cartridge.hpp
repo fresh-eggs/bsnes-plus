@@ -103,7 +103,7 @@ public:
 SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {
   fprintf(stderr, "[*][cartride.hpp] SNESCartridge::SNESCartridge\n");
   read_header(data, size);
-  type = TypeXBand;
+  //type = TypeXBand;
 
   string xml = "<?xml version='1.0' encoding='UTF-8'?>\n";
 

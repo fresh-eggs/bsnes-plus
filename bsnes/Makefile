@@ -6,7 +6,8 @@ ifeq ($(ui),)
   ui := ui-qt
 endif
 
-profile := accuracy
+#profile := accuracy
+profile := compatibility
 ifeq ($(profile),)
   profile := compatibility
   ifeq ($(out),)
