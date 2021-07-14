@@ -55,67 +55,40 @@ uint8 XBANDBase::read(unsigned addr) {
   
   if(within<0xfb, 0xfb, 0xc000, 0xc9ff>(addr)
   || within<0xfb, 0xfb, 0xfa00, 0xfbff>(addr)) {
-	switch(addr & 0x1ff) {
-		case 0x0f8:
-			break;
-		case 0x0fa:
-			break;
-		case 0x108:   //CARD! bit 0: XBAND Card check
-			return 0x01;
-		case 0x110:
-			break;
-		case 0x112:
-			break;
-		case 0x130:
-			break;
-		case 0x138:
-			break;
-		case 0x140:
-			break;
-		case 0x168:
-			break;
-		case 0x188:   //???
-			return 0x00;
-		case 0x192:
-			return 0xff;
-		case 0x196:   //d53898: DIAL-UP!
-			return 0x80;
-		case 0x1b0:   // ??
-			return 0xff;
-		case 0x1b2:   //For running XBAND
-			return 0x46;
-		case 0x1ba:
-			break;
-		case 0x1bc:
-			return 0x08;
-		case 0x1be:
-			break;
-	}
-		return 0x00;
+    fprintf(stderr, "[*][xband_base.cpp:mmio_read] addr: 0x%x\n", addr);
+	  uint8 reg = (addr-0xFBC000)/2;
+	  fprintf(stderr, "[*][xband_base.cpp:mmio_read] offset: 0x%x\n", reg);
+		
+    //Rockwell Modem Registers (C180h-C1BEh)
+    if (reg >= 0xc0 && reg <= 0xff) {
+      uint8 modemreg = reg - 0xc0;
+      fprintf(stderr, "[*][xband_base.cpp:mmio_read_rockwell] offset: 0x%x\n", modemreg);
+
+      switch(modemreg){
+      	case 0x09:
+      	  return 0x00;
+      	case 0x0b:
+      	  return 0x80;
+        case 0x19:
+          return 0x46;
+        case 0x1e:
+          return 0x08;
+        default:
+          return 0x00;
+      }
+    }
+
+		switch(reg){
+			case 0x7d:
+			  return 0x80;
+			case 0x7c:
+			  return 0;
+			case 0xb4:
+			  return 0x7f;
+			default:
+			  return 0x00;
+    }
   }
-  
-  /*
-  switch(addr) {
-    case 0xfbc108:   //CARD! bit 0: XBAND Card check
-		return 0x01;
-	case 0xfbc188:   //???
-		return 0x00;
-	case 0xfbc192:
-		break;
-	case 0xfbc196:   //d53898: DIAL-UP!
-		return 0x80;
-	case 0xfbc1b0:   // ??
-		break;
-	case 0xfbc1b2:   //For running XBAND
-		return 0x46;
-	case 0xfbc1ba:
-		break;
-	case 0xfbc1bc:
-		return 0x08;
-	case 0xfbc1be:
-		break;
-  }
-  */
   return 0xff;
 }
 
