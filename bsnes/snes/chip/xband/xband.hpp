@@ -4,6 +4,23 @@
 #include <netinet/in.h>
 #include <netdb.h>
 
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+
+#include <string.h>
+#include <stdlib.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <errno.h>
+
 #define XBAND_REGS 0xE0
 
 class XBANDBase : public Coprocessor, public Memory  {
@@ -35,13 +52,16 @@ public:
 
   void serialize(serializer&);
 
-  typedef struct {
+  void xband_send_identity();
+  void debug_modem_registers();
+  
+  struct XBANDModem {
     uint8_t line_relay;
     uint8_t regs[0x20];
     uint8_t set_ATV25;
-  } xband_modem;
+  };
 
-  typedef struct {
+  struct XBANDState {
     uint16_t cart_space[0x200000];
     uint8_t regs[XBAND_REGS];
     uint8_t kill;
@@ -58,10 +78,14 @@ public:
     uint8_t txbuf[16384];
     uint32_t txbufpos;
     uint32_t txbufused;
-  } xband;
+  };
 
 private:
   uint8 mapset;
+  //is this really how this works? How do struct objects work
+  //in C++ as opposed typedef'd struct pointers in C ?
+  //xband_state *x, obj;
+  //x = &obj;
   
   bool read_96;
 };

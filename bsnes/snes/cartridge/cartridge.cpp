@@ -85,7 +85,7 @@ void Cartridge::load(Mode cartridge_mode, const lstring &xml_list) {
 
   if(mode == Mode::XBand) {
     fprintf(stderr, "[*][cartridge.cpp:load] allocate xband mem \n");
-    memory::xbandSram.map(allocate<uint8_t>(0x10000, 0xff), 0x10000);
+    memory::xbandSram.map(allocate<uint8_t>(0x10000, 0x00), 0x10000);
   }
 
   if(mode == Mode::Bsx) {
