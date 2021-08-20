@@ -73,11 +73,11 @@ public:
     uint8_t modem_set_ATV25;
     uint8_t net_step;
     uint8_t rxbuf[16384];
-    uint32_t rxbufpos;
-    uint32_t rxbufused;
+    uint32_t rxbufindex;
+    uint32_t rxbufconsumed;
     uint8_t txbuf[16384];
-    uint32_t txbufpos;
-    uint32_t txbufused;
+    uint32_t txbufindex;
+    uint32_t txbufconsumed;
   };
 
 private:

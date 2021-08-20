@@ -155,7 +155,7 @@ namespace nall {
           break;
       }
 
-      p_fd = ::open(filename, open_flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
+      p_fd = SNES::open(filename, open_flags, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
       if(p_fd < 0) return false;
 
       struct stat p_stat;

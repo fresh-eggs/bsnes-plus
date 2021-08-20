@@ -75,6 +75,8 @@ enum {
 XBANDBase xband_base;
 XBANDBase::XBANDState *x, obj;
 
+int consecutive_reads = 0;
+
 void XBANDBase::Enter() {
 	xband_base.enter();
 }
@@ -201,7 +203,7 @@ uint8 XBANDBase::read(unsigned addr) {
     return memory::xbandSram.read(addr);
   }
 
-  //0xFBC000 -- 0xFBFE00
+  //0xFBC000 -- 0xFBFDFF
   // seems if I change the read width of this beyond fbfdff, xband wont start...
   if(within<0xfb, 0xfb, 0xc000, 0xfdff>(addr)) {
 	  uint8 reg = (addr-0xFBC000)/2;
@@ -215,38 +217,48 @@ uint8 XBANDBase::read(unsigned addr) {
 			return 0x7f;
 
 		if (reg == 0x94) { //krxbuff
-			if (x->rxbufused >= x->rxbufpos) return 0;
-			uint8_t r = x->rxbuf[x->rxbufused];
-			x->rxbufused++;
-			if (x->rxbufused == x->rxbufpos) {
-				x->rxbufused = x->rxbufpos = 0;
+			fprintf(stderr, "[+][modem][krxbuff] x->rxbufconsumed: %d | x->rxbufindex: %d\n", x->rxbufconsumed, x->rxbufindex);
+			if (x->rxbufconsumed >= x->rxbufindex) return 0;
+			uint8 r = x->rxbuf[x->rxbufconsumed];
+			x->rxbufconsumed++;
+			if (x->rxbufconsumed == x->rxbufindex) {
+				x->rxbufconsumed = x->rxbufindex = 0;
 			}
 			fprintf(stderr, "[+][modem][krxbuff] FRED FIFO Read: 0x%x\n", r);
 			return r;
 		}
 		if (reg == 0x98) { //kreadmstatus2
 			if (x->net_step) {
-				ssize_t ret = ::read(x->conn, &x->rxbuf[x->rxbufpos], sizeof(x->rxbuf) - x->rxbufpos);
+				ssize_t ret = ::read(x->conn, &x->rxbuf[x->rxbufindex], sizeof(x->rxbuf) - x->rxbufindex);
 				if (ret != -1 && ret != 0) {
 					if (x->net_step == 1) {
 						xband_send_identity();
 						//debug_modem_registers();
-						::write(x->conn, x->txbuf, x->txbufpos);
-						fprintf(stderr, "[+][modem][] Write post identity send\n");
-						x->txbufpos = 0;
+						::write(x->conn, x->txbuf, x->txbufindex);
+						fprintf(stderr, "[+][modem] Write post identity send\n");
+						x->txbufindex = 0;
 					}
-					x->rxbufpos += ret;
+					x->rxbufindex += ret;
 				} else if (ret != 0) {
-					fprintf(stderr, "[+]Read error\n");
+					//fprintf(stderr, "[+]Read error\n");
 				}
-				if (x->rxbufused < x->rxbufpos) {
+				if (x->rxbufconsumed < x->rxbufindex) {
+					consecutive_reads++;
+					fprintf(stderr, "[+][modem] CONSECUTIVE READ COUNT: %d\n", consecutive_reads);
+
+					if (consecutive_reads >= 127) {
+					  fprintf(stderr, "\n\n\n***** Potential Fifo Overflow Avoidance *****\n\n\n");
+					  consecutive_reads = 0;
+					  return 0;
+					}  
 					return 1;
 				}
 			}
+			consecutive_reads = 0;
 			return 0;
 		}
 		if (reg == 0xa0) {
-			fprintf(stderr, "[+]Fred modem status 1 read\n");
+			//fprintf(stderr, "[+]Fred modem status 1 read\n");
 			return 0;
 		}
 		if (reg >= 0xc0 && reg <= 0xff) {  //begins @ 0xFBC180 (180/2 == c0)
@@ -308,19 +320,20 @@ uint8 XBANDBase::read(unsigned addr) {
 				fprintf(stderr, "[*][xband_base.cpp:read] UNHANDLED REGISTER: 0x%x\n", reg);
 				return 0x5D;
 			}
-		} else {
-			if (addr == 0xFBFE01) {
-				fprintf(stderr, "KILL READ 3bfe01: %x\n", x->kill);
-				return x->kill;
-			} else if (addr == 0xFBFE03) {
-				fprintf(stderr, "CONTROL READ 3bfe03: %x\n", x->control);
-				return x->control;
-			} else {
-				fprintf(stderr, "[*][xband_base.cpp:read] UNHANDLED REGISTER: 0x%x\n", reg);
-				return 0x5D;
-			}
 		}
 	}
+
+	if (addr == 0xFBFE01) {
+		fprintf(stderr, "KILL READ 3bfe01: %x\n", x->kill);
+		return x->kill;
+	} else if (addr == 0xFBFE03) {
+		fprintf(stderr, "CONTROL READ 3bfe03: %x\n", x->control);
+		return x->control;
+	} else {
+		fprintf(stderr, "[*][xband_base.cpp:read] UNHANDLED REGISTER: 0x%x\n", addr);
+		return 0x5D;
+	}
+	
   return 0x00;
 }
 
@@ -344,7 +357,7 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 			::write(x->conn, &data, 1);
 		} else if (x->net_step == 1) {
 			fprintf(stderr, "[+][modem] FRED FIFO write | net_step == 1 | data: %x\n", data);
-			x->txbuf[x->txbufpos++] = data;
+			x->txbuf[x->txbufindex++] = data;
 		}
 	}
 
@@ -395,11 +408,11 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 			case 0x07:
 				x->modem_line_relay = data & 0b10;
 				if (x->modem_line_relay == 0 && x->net_step) {
-					printf(stderr, "[-]Box hung up, killing connection\n");
+					fprintf(stderr, "[-]Box hung up, killing connection\n");
 					close(x->conn);
 					x->net_step = 0;
-					x->txbufpos = 0;
-					x->rxbufpos = x->rxbufused = 0;
+					x->txbufindex = 0;
+					x->rxbufindex = x->rxbufconsumed = 0;
 				}
 				break;
 			case 0x09:
