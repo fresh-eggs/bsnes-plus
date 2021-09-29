@@ -482,6 +482,7 @@ void MemoryEditor::exportMemory() {
   exportMemory(SNES::memory::vram, string() << basename << "-vram.bin");
   exportMemory(SNES::memory::oam, string() << basename << "-oam.bin");
   exportMemory(SNES::memory::cgram, string() << basename << "-cgram.bin");
+  exportMemory(SNES::memory::xbandSram, "xband_sram.bin");
 }
 
 void MemoryEditor::importMemory() {

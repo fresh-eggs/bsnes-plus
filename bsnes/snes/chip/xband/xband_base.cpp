@@ -1,3 +1,5 @@
+#include <nall/string.hpp>
+
 enum {
 	PATCH0_LOW,
 	PATCH0_MID,
@@ -75,7 +77,56 @@ enum {
 XBANDBase xband_base;
 XBANDBase::XBANDState *x, obj;
 
+nall::string incoming_messages[62];
+
 int consecutive_reads = 0;
+uint32_t packet_index = 0;
+bool conn_active = false;
+bool injected = false;
+uint16_t next_pckFirstByteSeq = 0;
+uint8_t loop_count = 0;
+
+uint8_t payload[73] = {
+	0x00, 0x05, 0x39, 0x00, 0x00, 0x00, 0x28, 0x00, 0x00, 0x02,
+	0x17, 0x04, 0x00, 0x40, 0x09, 0x00, 0x00, 0x00, 0x32, 0x9c,
+	0x21, 0x21, 0xa9, 0x1f, 0x8d, 0x22, 0x21, 0x9c, 0x22, 0x21, 
+  0xa9, 0x0f, 0x8d, 0x00, 0x21, 0xea, 0xea, 0xea, 0xea, 0xea,
+  0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea,
+  0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 
+  0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0xea, 0x17,
+  0x58, 0x10, 0x03
+};
+
+// STP payload
+//uint8_t payload[27] = {
+//	0x00, 0x05, 0x39, 0x00, 0x00, 0x02, 0x93, 0x00, 0x00, 0x02,
+//	0x18, 0x04, 0x00, 0x40, 0x09, 0x00, 0x00, 0x00, 0x04, 0xdb,
+//	0xdb, 0xdb, 0xdb, 0x0a, 0x20, 0x10, 0x03
+//};
+
+//uint8_t payload[53] = {
+//	0x00,0x05,0x39,0x00,0x00,0x01,0xAC,0x00,0x00,0x02,
+//	0x17,0x04,0x00,0x40,0x10,0x00,0x00,0x00,0x00,0x00,
+//	0x00,0x00,0xAE,0xDE,0x10,0x03,0x00,0xBE,0xEF,0x00,
+//	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x00,
+//	0x09,0x04,0x00,0x00,0x00,0x22,0xFF,0xFF,0xFF,0x58,
+//	0x7D,0x10,0x03
+//};
+
+void import_sram() {
+	fprintf(stderr, "[+] IMPORTING SRAM\n");
+  file fp;
+
+  if(fp.open("xband_sram.bin", file::mode::read)) {
+    unsigned filesize = fp.size();
+    for (unsigned i = 0; i < SNES::memory::xbandSram.size() && i < filesize; i++) {
+    	SNES::memory::xbandSram.write(i, fp.read());
+    }
+    fp.close();
+  }
+  else
+  	fprintf(stderr, "[X] FAILED TO READ SRAM\n");
+}
 
 void XBANDBase::Enter() {
 	xband_base.enter();
@@ -90,6 +141,7 @@ void XBANDBase::enter() {
 }
 
 void XBANDBase::init() {
+	SNES::memory::xbandSram.map(allocate<uint8_t>(0x10000, 0x00), 0x10000);
 }
 
 void XBANDBase::enable() {
@@ -99,6 +151,7 @@ void XBANDBase::enable() {
 
 void XBANDBase::power() {
   reset();
+  import_sram();
 }
 
 void XBANDBase::reset() {
@@ -117,64 +170,151 @@ void XBANDBase::reset() {
 	//x->modem_regs[0x1D] = 0x8A;
 
 	x->regs[UNKNOWN_REG2] = 8;
+
+	incoming_messages[1] = "msUnusedMessageHandler";
+	incoming_messages[2] = "msEndOfStream";
+	incoming_messages[3] = "msGamePatch";
+	incoming_messages[4] = "msSetDateAndTime";
+	incoming_messages[5] = "msServerMiscControl";
+	incoming_messages[9] = "msExecuteCode";
+	incoming_messages[10] = "msPatchOSCode";
+	incoming_messages[12] = "msRemoveDBTypeOpCode";
+	incoming_messages[13] = "msRemoveMessageHandler";
+	incoming_messages[14] = "msRegisterPlayer";
+	incoming_messages[15] = "msNewNGPList";
+	incoming_messages[16] = "msSetBoxSerialNumber";
+	incoming_messages[17] = "msGetTypeIDsFromDB";
+	incoming_messages[18] = "msAddItemToDB";
+	incoming_messages[19] = "msDeleteItemFromDB";
+	incoming_messages[20] = "msGetItemFromDB";
+	incoming_messages[21] = "msGetFirstItemIDFromDB";
+	incoming_messages[22] = "msGetNextItemIDFromDB";
+	incoming_messages[23] = "msClearSendQ";
+	incoming_messages[27] = "msLoopBack";
+	incoming_messages[28] = "msWaitForOpponent";
+	incoming_messages[29] = "msOpponentPhoneNumber";
+	incoming_messages[30] = "msReceiveMail";
+	incoming_messages[31] = "msNewsHeader";
+	incoming_messages[32] = "msNewsPage";
+	incoming_messages[33] = "msUNUSED1";
+	incoming_messages[34] = "msQDefDialog";
+	incoming_messages[35] = "msAddAddressBookEntry";
+	incoming_messages[36] = "msDeleteAddressBookEntry";
+	incoming_messages[37] = "msReceiveRanking";
+	incoming_messages[38] = "msDeleteRanking";
+	incoming_messages[39] = "msGetNumRankings";
+	incoming_messages[40] = "msGetFirstRankingID";
+	incoming_messages[41] = "msGetNextRankingID";
+	incoming_messages[42] = "msGetRankingData";
+	incoming_messages[43] = "msSetBoxPhoneNumber";
+	incoming_messages[44] = "msSetLocalAccessPhoneNumber";
+	incoming_messages[45] = "msSetConstants";
+	incoming_messages[46] = "msReceiveValidPers";
+	incoming_messages[47] = "msGetInvalidPers";
+	incoming_messages[48] = "msDeleteUncorrelatedAddressBookEntries";
+	incoming_messages[49] = "msCorrelateAddressBookEntry";
+	incoming_messages[50] = "msReceiveWriteableString";
+	incoming_messages[51] = "msReceiveCredit";
+	incoming_messages[52] = "msReceiveRestrictions";
+	incoming_messages[53] = "msReceiveCreditToken";
+	incoming_messages[54] = "msSetCurrentUserName";
+	incoming_messages[56] = "msSetBoxHometown";
+	incoming_messages[57] = "msGetConstant";
+	incoming_messages[58] = "msReceiveProblemToken";
+	incoming_messages[59] = "msReceiveValidationToken";
+	incoming_messages[60] = "msLiveDebitSmartCard";
+	incoming_messages[61] = "msSendDialScript";
+	incoming_messages[62] = "msSetCurrentUserNumber";
+	incoming_messages[63] = "msBoxWipeMind";
+	incoming_messages[64] = "msGetHiddenSerials";
+	incoming_messages[66] = "msGetLoadedGameInfo";
+	incoming_messages[67] = "msClearNetOpponent";
+	incoming_messages[68] = "msGetBoxMemStats";
+	incoming_messages[69] = "msReceiveRentalSerialNumber";
+	incoming_messages[70] = "msReceiveNewsIndex";
+	incoming_messages[71] = "msReceiveBoxNastyLong";
 }
 
 void XBANDBase::unload() {
 }
 
-void XBANDBase::debug_modem_registers() {
-	fprintf(stderr, "\n----------------------------------[Rockwell Registers]----------------------------------\n");
-	fprintf(
-		stderr, 
-		"| RA(0x07:1)     = "BYTE_TO_BINARY_PATTERN" | CONF(0x12:0-7) = "BYTE_TO_BINARY_PATTERN" | VOL(0x13:2-3)     = "BYTE_TO_BINARY_PATTERN"\n",
-		BYTE_TO_BINARY(x->modem_regs[0x7]),
-		BYTE_TO_BINARY(x->modem_regs[0x12]),
-		BYTE_TO_BINARY(x->modem_regs[0x13]));
+uint8_t process_adsp_packet_in(uint32_t index) {
+	if ((x->rx_packet_dbg[14] == 0x2D) && !injected) {
+		fprintf(stderr, "[+] INJECTING PAYLOAD INTO RXBUF\n\n");
+		// should we check that there is enough room in the rxbuff ?
+		//packet_index points to the last byte of our trigger packet so start
+		//writing over the next one
+		index += 1;
+		fprintf(stderr, "[-] BYTE INJECTION INDEX: %d\n", index);
+		for(int i = 0; i < sizeof(payload); i++) {
+			fprintf(stderr, "[+] OLD BYTE: 0x%02X\n", x->rxbuf[index + i]);
+			x->rxbuf[index + i] = payload[i];
+			fprintf(stderr, "[+] NEW BYTE: 0x%02X\n", x->rxbuf[index + i]);
+		}
+		injected = true;
+		return sizeof(payload);
+	}
+	return 0;
+}
 
-	fprintf(
-		stderr, 
-		"| LL(0x09:3)     = "BYTE_TO_BINARY_PATTERN" | DATA(0x09:2)   = "BYTE_TO_BINARY_PATTERN" | NEWC(0x0f:1)      = "BYTE_TO_BINARY_PATTERN"\n",
-		BYTE_TO_BINARY(x->modem_regs[0x9]),
-		BYTE_TO_BINARY(x->modem_regs[0x9]),
-		BYTE_TO_BINARY(x->modem_regs[0xf]));
+void print_adsp_debug_in(uint8_t packet_size) {
+	if(packet_size < 14) {
+		fprintf(stderr, "[X] BAD PACKET SIZE:\t\t%d\n", packet_size);
+		return;
+	}
 
-	fprintf(
-		stderr, 
-		"| TONEA(0x0b:7)  = "BYTE_TO_BINARY_PATTERN" | DTMF(0x09:5)   = "BYTE_TO_BINARY_PATTERN" | TDBE(0x1e:3)      = "BYTE_TO_BINARY_PATTERN"\n",
-		BYTE_TO_BINARY(x->modem_regs[0xb]),
-		BYTE_TO_BINARY(x->modem_regs[0x9]),
-		BYTE_TO_BINARY(x->modem_regs[0x1e]));
+	fprintf(stderr, "<<<<<<<<<<<<<<<<<<<<<<<<[ADSP PACKET]<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	uint8_t byte_count = 0;
+	for (uint16_t i = 0; i <= packet_size; i++) {
+		fprintf(stderr, "0x%02X ", x->rx_packet_dbg[i]);
+		byte_count++;
+		
+		if (byte_count >= 15) {
+			byte_count = 0;
+			fprintf(stderr, "\n");
+		}
+	}
+	fprintf(stderr, "\n\n<<<<<<<<<<<<<<<<<<<<<<<<<<<[HEADER]<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	for (uint8_t i = 1; i <= 13; i++) {
+		fprintf(stderr, "0x%02X ", x->rx_packet_dbg[i]);
+	}
+	fprintf(stderr, "\n\n");
+	fprintf(stderr, "[Source ConnID]:\t\t0x%02X%02X\n[PktFirstByteSeq]:\t\t0x%02X%02X%02X%02X\n[PktNextRecvSeq]:\t\t0x%02X%02X%02X%02X\n",
+		x->rx_packet_dbg[1], x->rx_packet_dbg[2], x->rx_packet_dbg[3], x->rx_packet_dbg[4], 
+		x->rx_packet_dbg[5], x->rx_packet_dbg[6], x->rx_packet_dbg[7], x->rx_packet_dbg[8],
+		x->rx_packet_dbg[9], x->rx_packet_dbg[10]);
+	fprintf(stderr, "[PktRecvWindow]:\t\t0x%02X%02X\n[ADSP Descriptor]:\t\t0x%02X\n",
+		x->rx_packet_dbg[11], x->rx_packet_dbg[12], x->rx_packet_dbg[13]);
+	
+	if(packet_size < 14) {
+		return;
+	}
 
-	fprintf(
-		stderr, 
-		"| XDAL(0x18:0-7) = "BYTE_TO_BINARY_PATTERN" | XDAM(0x19:0-7) = "BYTE_TO_BINARY_PATTERN" | TBUFFER(0x10:0-7) = "BYTE_TO_BINARY_PATTERN"\n",
-		BYTE_TO_BINARY(x->modem_regs[0x18]),
-		BYTE_TO_BINARY(x->modem_regs[0x19]),
-		BYTE_TO_BINARY(x->modem_regs[0x10]));
-
-	fprintf(
-		stderr, 
-		"| RTS(0x08:0)    = "BYTE_TO_BINARY_PATTERN" | ORG(0x09:4)    = "BYTE_TO_BINARY_PATTERN" | ATV25(0x0b:4)     = "BYTE_TO_BINARY_PATTERN"\n",
-		BYTE_TO_BINARY(x->modem_regs[0x8]),
-		BYTE_TO_BINARY(x->modem_regs[0x9]),
-		BYTE_TO_BINARY(x->modem_regs[0xb]));
-
-	fprintf(
-		stderr, 
-		"| CTS(0x0f:5)    = "BYTE_TO_BINARY_PATTERN" | RDBF(0x1e:0)   = "BYTE_TO_BINARY_PATTERN" | FE(0x0e:4)        = "BYTE_TO_BINARY_PATTERN"\n",
-		BYTE_TO_BINARY(x->modem_regs[0xf]),
-		BYTE_TO_BINARY(x->modem_regs[0x1e]),
-		BYTE_TO_BINARY(x->modem_regs[0xe]));
-
-	fprintf(
-		stderr, 
-		"| PE(0x0e:5)     = "BYTE_TO_BINARY_PATTERN" | OE(0x0e:3)     = "BYTE_TO_BINARY_PATTERN" | RLSD(0x0f:7)      = "BYTE_TO_BINARY_PATTERN"\n",
-		BYTE_TO_BINARY(x->modem_regs[0xe]),
-		BYTE_TO_BINARY(x->modem_regs[0xe]),
-		BYTE_TO_BINARY(x->modem_regs[0xf]));
-
-	fprintf(stderr, "| RBUFFER(0x0:0-7) = "BYTE_TO_BINARY_PATTERN"\n", BYTE_TO_BINARY(x->modem_regs[0x0]));
-	fprintf(stderr, "----------------------------------------------------------------------------------------\n\n");
+	fprintf(stderr, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<[DATA]<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	byte_count = 0;
+	uint16_t byte_total = 0;
+	for (uint16_t i = 0x0E; i <= packet_size; i++) {
+		fprintf(stderr, "0x%02X ", x->rx_packet_dbg[i]);
+		byte_count++;
+		byte_total++;
+		
+		if (byte_count >= 15) {
+			byte_count = 0;
+			fprintf(stderr, "\n");
+		}
+	}
+	fprintf(stderr, "\n[DATA LENGTH]:\t\t%02X | %d\n", byte_total, byte_total);
+	next_pckFirstByteSeq = x->rx_packet_dbg[3] +
+						 						 x->rx_packet_dbg[4] +
+						 						 x->rx_packet_dbg[5] +
+						 						 x->rx_packet_dbg[6] +
+			      						 (byte_total-4); //remove the CRC and EOP bytes
+	fprintf(stderr, "[NEXT VALID pckFirstByteSeq]:\t\t%02X", next_pckFirstByteSeq);
+	fprintf(stderr, "\n\n");
+	const char* message_name = incoming_messages[x->rx_packet_dbg[14]];
+	fprintf(stderr, "[XBAND MSG ID]:\t\t0x%X  | %s\n",  x->rx_packet_dbg[14], message_name);
+	fprintf(stderr, "\n<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n");
+	fprintf(stderr, "\n\n\n\n\n\n");
 }
 
 void XBANDBase::xband_send_identity() {
@@ -183,12 +323,10 @@ void XBANDBase::xband_send_identity() {
 	strcat(hdr1, id);
 	strcat(hdr1, "\x0a");
 	::write(x->conn, &hdr1, strlen(hdr1));
-  fprintf(stderr, "[+][modem] Identity Sent %s\n", hdr1);
 	x->net_step = 2;
 }
 
 uint8 XBANDBase::read(unsigned addr) {
-	//fprintf(stderr, "[*][xband_base.cpp:mmimo_read] addr: 0x%x\n", addr);
   // 0xE00000 - 0xFAFFFF
   // 0xFB0000 - 0xFBBFFF
   //(0xFBC000 - 0xFBFE00)
@@ -207,47 +345,72 @@ uint8 XBANDBase::read(unsigned addr) {
   // seems if I change the read width of this beyond fbfdff, xband wont start...
   if(within<0xfb, 0xfb, 0xc000, 0xfdff>(addr)) {
 	  uint8 reg = (addr-0xFBC000)/2;
-	  //fprintf(stderr, "[*][xband_base.cpp:read] register: 0x%x\n", reg);
 		
     if (reg == 0x7d)
 			return 0x80;
-		//if (reg == 0x7c) //kAddrStatus
-		//	return 0;
 		if (reg == 0xb4) //kLEDData
 			return 0x7f;
 
 		if (reg == 0x94) { //krxbuff
-			fprintf(stderr, "[+][modem][krxbuff] x->rxbufconsumed: %d | x->rxbufindex: %d\n", x->rxbufconsumed, x->rxbufindex);
 			if (x->rxbufconsumed >= x->rxbufindex) return 0;
 			uint8 r = x->rxbuf[x->rxbufconsumed];
+			//fprintf(stderr, "[---] RXBUF BYTE CONSUMED: 0x%02X | rxbufconsumed: 0x%02X\n", r, x->rxbufconsumed);
 			x->rxbufconsumed++;
 			if (x->rxbufconsumed == x->rxbufindex) {
+				//fprintf(stderr, "[*] reset the rxbufconsumed and the rxbufindex to 0\n");
 				x->rxbufconsumed = x->rxbufindex = 0;
 			}
-			fprintf(stderr, "[+][modem][krxbuff] FRED FIFO Read: 0x%x\n", r);
 			return r;
 		}
+
 		if (reg == 0x98) { //kreadmstatus2
 			if (x->net_step) {
 				ssize_t ret = ::read(x->conn, &x->rxbuf[x->rxbufindex], sizeof(x->rxbuf) - x->rxbufindex);
+				
 				if (ret != -1 && ret != 0) {
 					if (x->net_step == 1) {
 						xband_send_identity();
-						//debug_modem_registers();
 						::write(x->conn, x->txbuf, x->txbufindex);
-						fprintf(stderr, "[+][modem] Write post identity send\n");
 						x->txbufindex = 0;
 					}
-					x->rxbufindex += ret;
+					
+					// debugging ---------------------------
+					// copy each of the new bytes added to the ring buffer this read
+					// to the packet debug array and process them.
+     		  for (int i = 0; i < ret; i++) {
+        		x->rx_packet_dbg[packet_index] = x->rxbuf[x->rxbufindex + i];
+        		//fprintf(stderr, "[-] BYTE IN THE RXBUF 0x%02X | loop: %d | rxbufindex: %d | loop_count: %d\n", x->rxbuf[x->rxbufindex + i], i, x->rxbufindex, loop_count);
+        		if (x->rx_packet_dbg[packet_index] == 0x03) {
+       		 		if (x->rx_packet_dbg[packet_index - 1] == 0x10) {
+       		 			//fprintf(stderr, "\n\n\n****** FOUND END OF PACKET ******\n\n\n");
+       		 			print_adsp_debug_in(packet_index);
+								uint16_t written = process_adsp_packet_in(x->rxbufindex + i);
+								
+								//if written > remaining buffer space
+
+								ret += written;
+
+       		 			packet_index = 0;
+     		   			for (int q = 0; q < ret; q++) {
+     		   				x->rx_packet_dbg[q] = 0x00;
+     		   			}
+   		     		}
+   		     		else
+   		     			packet_index++;
+   		     	}
+   		     	else
+   		     		packet_index++;
+  	      }
+  	      // debugging ---------------------------
+  	      loop_count += 1;
+  	      x->rxbufindex += ret;
 				} else if (ret != 0) {
-					//fprintf(stderr, "[+]Read error\n");
+				  // no op
 				}
 				if (x->rxbufconsumed < x->rxbufindex) {
 					consecutive_reads++;
-					fprintf(stderr, "[+][modem] CONSECUTIVE READ COUNT: %d\n", consecutive_reads);
 
 					if (consecutive_reads >= 127) {
-					  fprintf(stderr, "\n\n\n***** Potential Fifo Overflow Avoidance *****\n\n\n");
 					  consecutive_reads = 0;
 					  return 0;
 					}  
@@ -258,16 +421,13 @@ uint8 XBANDBase::read(unsigned addr) {
 			return 0;
 		}
 		if (reg == 0xa0) {
-			//fprintf(stderr, "[+]Fred modem status 1 read\n");
 			return 0;
 		}
 		if (reg >= 0xc0 && reg <= 0xff) {  //begins @ 0xFBC180 (180/2 == c0)
 			uint8_t modemreg = reg - 0xc0;
 			uint8_t ret = 0;
 
-			//fprintf(stderr, "[*][xband_base.cpp:read] modem register: 0x%x\n", modemreg);
 			if (modemreg == 0x00) {
-				fprintf(stderr, "[+]Modem RX read\n");
 			}
 			switch (modemreg) {
         case 0x19: // X-RAM Data (16bit)
@@ -279,7 +439,6 @@ uint8 XBANDBase::read(unsigned addr) {
 				case 0x0b:
 					if (x->modem_line_relay) ret |= (1<<7); //TONEA
 					if (x->modem_set_ATV25) {
-						fprintf(stderr, "ATV25 was read\n");
 						ret |= (1<<4); //ATV25
 						x->modem_set_ATV25 = 0;
 					}
@@ -314,23 +473,18 @@ uint8 XBANDBase::read(unsigned addr) {
 		if (addr < 0xFBFE00) {
 			uint32_t offset = (addr - 0xFBC001) / 2;
 			if (offset < XBAND_REGS) {
-				//fprintf(stderr, "Regsister read: 0%X\n", addr);
 				return x->regs[offset];
 			} else {
-				fprintf(stderr, "[*][xband_base.cpp:read] UNHANDLED REGISTER: 0x%x\n", reg);
 				return 0x5D;
 			}
 		}
 	}
 
 	if (addr == 0xFBFE01) {
-		fprintf(stderr, "KILL READ 3bfe01: %x\n", x->kill);
 		return x->kill;
 	} else if (addr == 0xFBFE03) {
-		fprintf(stderr, "CONTROL READ 3bfe03: %x\n", x->control);
 		return x->control;
 	} else {
-		fprintf(stderr, "[*][xband_base.cpp:read] UNHANDLED REGISTER: 0x%x\n", addr);
 		return 0x5D;
 	}
 	
@@ -338,7 +492,6 @@ uint8 XBANDBase::read(unsigned addr) {
 }
 
 void XBANDBase::write(unsigned addr, uint8 data) {
-  //fprintf(stderr, "[*][xband_base][mimo_write] addr: 0x%x | data: 0x%x\n", addr, data);
 	if(within<0xe0, 0xfa, 0x0000, 0xffff>(addr)
   || within<0xfb, 0xfb, 0x0000, 0xbfff>(addr)
   || within<0xfc, 0xff, 0x0000, 0xffff>(addr)
@@ -349,26 +502,20 @@ void XBANDBase::write(unsigned addr, uint8 data) {
   }
 
 	uint32_t reg = (addr-0xFBC000)/2;  // collect the "register" by subtracting the default internal offset 
-	//fprintf(stderr, "[*][xband_base][mimo_write] register: 0x%x | data: 0x%x\n", reg, data);
 	if (reg == 0x90) {
 		if (x->net_step == 2) {
 			//debug_modem_registers();
-			fprintf(stderr, "[+][modem] FRED FIFO write | net_step == 2 | data: %x\n", data);
 			::write(x->conn, &data, 1);
 		} else if (x->net_step == 1) {
-			fprintf(stderr, "[+][modem] FRED FIFO write | net_step == 1 | data: %x\n", data);
 			x->txbuf[x->txbufindex++] = data;
 		}
 	}
 
 	if (reg >= 0xc0 && reg <= 0xff) { 
-		//fprintf(stderr, "[*][xband_base][mimo_write] modem register: 0x%x | data: 0x%x\n", reg, data);
 		uint8_t modemreg = reg - 0xc0;
 		if (modemreg == 0x10) {
-			fprintf(stderr, "[+]Modem TX 0x%02x\n", data);
 		}
 		if (modemreg == 0x08 && (data & 1) && (x->net_step < 1)) {
-			fprintf(stderr, "[*]RTS was set, restarting connection | net_step == %d\n", x->net_step);
 			struct addrinfo hints;
 			struct addrinfo *res = NULL;
 			char *addr = "16bit.retrocomputing.network";
@@ -379,19 +526,16 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 			hints.ai_socktype = SOCK_STREAM;
 			int err = getaddrinfo(addr, port, &hints, &res);
 			if (err != 0) {
-				fprintf(stderr, "error 3 - %d\n", err);
 				return;
 			}
 
 			x->conn = socket(AF_INET, SOCK_STREAM, 0);
 			if (x->conn == NULL) {
-				fprintf(stderr, "error 1\n");
 				return;
 			}
 
 			err = connect(x->conn, res->ai_addr, res->ai_addrlen);
 			if (err != 0) {
-				fprintf(stderr, "error 2 - %d\n", err);
 				return;
 			}
 
@@ -408,7 +552,6 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 			case 0x07:
 				x->modem_line_relay = data & 0b10;
 				if (x->modem_line_relay == 0 && x->net_step) {
-					fprintf(stderr, "[-]Box hung up, killing connection\n");
 					close(x->conn);
 					x->net_step = 0;
 					x->txbufindex = 0;
@@ -439,34 +582,27 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 		uint32_t offset = (addr - 0xFBC001) / 2;
 		if (offset < XBAND_REGS) {
 			if (offset == 0x84) {
-				fprintf(stderr, "[+] WROTE TO SMART STATUS\n");
 				exit(1);
 			}
 			switch (offset)
 			{
 			  case MORE_MYSTERY:
 			  case UNKNOWN_REG:
-		  		fprintf(stderr, "Write to mysterious reg: %X: %X\n", addr, data);
 	  			data = data & 0x7F;
   				break;
 			  case UNKNOWN_REG3:
-			  	fprintf(stderr, "Write to mysterious reg: %X: %X\n", addr, data);
 			  	data = data & 0xFE;
 		  		break;
 			}
 			x->regs[offset] = data;
 		} else {
-			fprintf(stderr, "[*][xband_base][mimo_write] UNHANDLED REGISTER reg: 0x%x | data: 0x%x\n", reg, data);
 		}
 	} else {
 		if (addr == 0xFBFE01) {
 			x->kill = data;
-			fprintf(stderr, "Write to kill register %X\n", data);
 		} else if (addr == 0xFBFE03) {
 			x->control = data;
-			fprintf(stderr, "Write to control register %X\n", data);
 		} else {
-			fprintf(stderr, "[*][xband_base][mimo_write] UNHANDLED REGISTER reg: 0x%x | data: 0x%x\n", reg, data);
 		}
 	}
 	return;

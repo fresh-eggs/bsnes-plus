@@ -12,3 +12,16 @@
 */out
 */bin
 notes
+bsnes/-apuram.bin
+bsnes/-cgram.bin
+bsnes/-oam.bin
+bsnes/-sram.bin
+bsnes/-vram.bin
+bsnes/-wram.bin
+bsnes/.cpu.sym
+bsnes/lol
+bsnes/test.c
+bsnes/xband_rom
+bsnes/xband_sram.bin.bck
+bsnes/xband_strace
+bsnes/xband_strace_2

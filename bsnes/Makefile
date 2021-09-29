@@ -8,6 +8,7 @@ endif
 
 #profile := accuracy
 profile := compatibility
+#profile := performance
 ifeq ($(profile),)
   profile := compatibility
   ifeq ($(out),)

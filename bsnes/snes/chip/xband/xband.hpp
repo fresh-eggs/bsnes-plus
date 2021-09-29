@@ -22,6 +22,9 @@
 #include <errno.h>
 
 #define XBAND_REGS 0xE0
+#define ADSP_PACKET_MAX_SIZE 0x249 //585
+
+
 
 class XBANDBase : public Coprocessor, public Memory  {
 public:
@@ -63,30 +66,26 @@ public:
 
   struct XBANDState {
     uint16_t cart_space[0x200000];
-    uint8_t regs[XBAND_REGS];
-    uint8_t kill;
-    uint8_t control;
-    struct sockaddr_in server;
-    int conn;
-    uint8_t modem_line_relay;
-    uint8_t modem_regs[0x20];
-    uint8_t modem_set_ATV25;
-    uint8_t net_step;
-    uint8_t rxbuf[16384];
+    uint8_t  regs[XBAND_REGS];
+    uint8_t  kill;
+    uint8_t  control;
+    struct   sockaddr_in server;
+    int      conn;
+    uint8_t  modem_line_relay;
+    uint8_t  modem_regs[0x20];
+    uint8_t  modem_set_ATV25;
+    uint8_t  net_step;
+    uint8_t  rxbuf[16384];
     uint32_t rxbufindex;
     uint32_t rxbufconsumed;
-    uint8_t txbuf[16384];
+    uint8_t  txbuf[16384];
     uint32_t txbufindex;
     uint32_t txbufconsumed;
+    uint8_t  rx_packet_dbg[16384]; //16 byte ADSP header + 572 max data byte
   };
 
 private:
   uint8 mapset;
-  //is this really how this works? How do struct objects work
-  //in C++ as opposed typedef'd struct pointers in C ?
-  //xband_state *x, obj;
-  //x = &obj;
-  
   bool read_96;
 };
 
@@ -98,6 +97,8 @@ class XBANDCart : public Memory {
     void power();
     void reset();
     void enable();
+    void import_sram();
+    void export_sram();
 
     void serialize(serializer&);
 
