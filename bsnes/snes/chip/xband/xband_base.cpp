@@ -97,22 +97,6 @@ uint8_t payload[73] = {
   0x58, 0x10, 0x03
 };
 
-// STP payload
-//uint8_t payload[27] = {
-//	0x00, 0x05, 0x39, 0x00, 0x00, 0x02, 0x93, 0x00, 0x00, 0x02,
-//	0x18, 0x04, 0x00, 0x40, 0x09, 0x00, 0x00, 0x00, 0x04, 0xdb,
-//	0xdb, 0xdb, 0xdb, 0x0a, 0x20, 0x10, 0x03
-//};
-
-//uint8_t payload[53] = {
-//	0x00,0x05,0x39,0x00,0x00,0x01,0xAC,0x00,0x00,0x02,
-//	0x17,0x04,0x00,0x40,0x10,0x00,0x00,0x00,0x00,0x00,
-//	0x00,0x00,0xAE,0xDE,0x10,0x03,0x00,0xBE,0xEF,0x00,
-//	0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x04,0x00,0x00,
-//	0x09,0x04,0x00,0x00,0x00,0x22,0xFF,0xFF,0xFF,0x58,
-//	0x7D,0x10,0x03
-//};
-
 void import_sram() {
 	fprintf(stderr, "[+] IMPORTING SRAM\n");
   file fp;
@@ -319,20 +303,217 @@ void print_adsp_debug_in(uint8_t packet_size) {
 
 void XBANDBase::xband_send_identity() {
 	char hdr1[1024] = "///////EMU-";
-	char *id = "Waj04qaASNfmaRNw";
+	//char *id = "Waj04qaASNfmaRNw";
+	char *id = "0123456789abcde2";
 	strcat(hdr1, id);
 	strcat(hdr1, "\x0a");
 	::write(x->conn, &hdr1, strlen(hdr1));
 	x->net_step = 2;
 }
 
-uint8 XBANDBase::read(unsigned addr) {
+uint8 normal_mode_read(unsigned addr) {
+	return 0x00;
+}
+
+uint8 register_read(unsigned addr, unsigned regular_reg_base, unsigned other_reg_base) {
+  uint8 reg = (addr-regular_reg_base)/2;
+	
+  if (reg == 0x7d)
+		return 0x80;
+	if (reg == 0xb4) //kLEDData
+		return 0x7f;
+
+	if (reg == 0x94) { //krxbuff
+		if (x->rxbufconsumed >= x->rxbufindex) return 0;
+		uint8 r = x->rxbuf[x->rxbufconsumed];
+		//fprintf(stderr, "[---] RXBUF BYTE CONSUMED: 0x%02X | rxbufconsumed: 0x%02X\n", r, x->rxbufconsumed);
+		x->rxbufconsumed++;
+		if (x->rxbufconsumed == x->rxbufindex) {
+			//fprintf(stderr, "[*] reset the rxbufconsumed and the rxbufindex to 0\n");
+			x->rxbufconsumed = x->rxbufindex = 0;
+		}
+		return r;
+	}
+
+	if (reg == 0x98) { //kreadmstatus2
+		if (x->net_step) {
+			ssize_t ret = ::read(x->conn, &x->rxbuf[x->rxbufindex], sizeof(x->rxbuf) - x->rxbufindex);
+			
+			if (ret != -1 && ret != 0) {
+				if (x->net_step == 1) {
+					xband_send_identity();
+					::write(x->conn, x->txbuf, x->txbufindex);
+					x->txbufindex = 0;
+				}
+				
+				// debugging ---------------------------
+				// copy each of the new bytes added to the ring buffer this read
+				// to the packet debug array and process them.
+   		  for (int i = 0; i < ret; i++) {
+      		x->rx_packet_dbg[packet_index] = x->rxbuf[x->rxbufindex + i];
+      		//fprintf(stderr, "[-] BYTE IN THE RXBUF 0x%02X | loop: %d | rxbufindex: %d | loop_count: %d\n", x->rxbuf[x->rxbufindex + i], i, x->rxbufindex, loop_count);
+      		if (x->rx_packet_dbg[packet_index] == 0x03) {
+     		 		if (x->rx_packet_dbg[packet_index - 1] == 0x10) {
+     		 			//fprintf(stderr, "\n\n\n****** FOUND END OF PACKET ******\n\n\n");
+     		 			print_adsp_debug_in(packet_index);
+							//uint16_t written = process_adsp_packet_in(x->rxbufindex + i);
+							//ret += written;
+
+     		 			packet_index = 0;
+   		   			for (int q = 0; q < ret; q++) {
+   		   				x->rx_packet_dbg[q] = 0x00;
+   		   			}
+ 		     		}
+ 		     		else
+ 		     			packet_index++;
+ 		     	}
+ 		     	else
+ 		     		packet_index++;
+	      }
+	      // debugging ---------------------------
+	      loop_count += 1;
+	      x->rxbufindex += ret;
+			} else if (ret != 0) {
+			  // no op
+			}
+			if (x->rxbufconsumed < x->rxbufindex) {
+				consecutive_reads++;
+
+				if (consecutive_reads >= 127) {
+				  consecutive_reads = 0;
+				  return 0;
+				}  
+				return 1;
+			}
+		}
+		consecutive_reads = 0;
+		return 0;
+	}
+	if (reg == 0xa0) {
+		return 0;
+	}
+	if (reg >= 0xc0 && reg <= 0xff) {  //begins @ 0xFBC180 (180/2 == c0)
+		uint8_t modemreg = reg - 0xc0;
+		uint8_t ret = 0;
+
+		if (modemreg == 0x00) {
+		}
+		switch (modemreg) {
+      case 0x19: // X-RAM Data (16bit)
+        ret = x->modem_regs[modemreg];
+        break;
+			case 0x09:
+				ret = x->modem_regs[modemreg];
+				break;
+			case 0x0b:
+				if (x->modem_line_relay) ret |= (1<<7); //TONEA
+				if (x->modem_set_ATV25) {
+					ret |= (1<<4); //ATV25
+					x->modem_set_ATV25 = 0;
+				}
+				break;
+			case 0x0d:
+				ret |= (1<<3); //U1DET
+				break;
+			case 0x0e:
+				ret |= 3; //k2400Baud
+				break;
+			case 0x0f:
+				ret |= (1<<7) | (1<<5); //RLSD, CTS
+				break;
+			case 0x1c:
+				ret = x->modem_regs[0x1c];
+				break;
+			case 0x1d:
+				ret = x->modem_regs[0x1d];
+				break;
+			case 0x1e:
+				ret = x->modem_regs[0x1e] | (1<<3); //TDBE
+				break;
+			case 0x1f:
+				ret = x->modem_regs[0x1f];
+				break;
+			default:
+				break;
+		}
+		return ret;
+	}
+
+	if (addr < (other_reg_base - 1)) {
+		uint32_t offset = (addr - (base + 1)) / 2;
+		if (offset < XBAND_REGS) {
+			return x->regs[offset];
+		} else {
+			return 0x5D;
+		}
+	}
+}
+
+uint8 here_mode_read(unsigned addr){
   // 0xE00000 - 0xFAFFFF
   // 0xFB0000 - 0xFBBFFF
   //(0xFBC000 - 0xFBFE00)
   // 0xFC0000 - 0xFFFFFF
   // 0x600000 - 0x7DFFFF
-  if(within<0xe0, 0xfa, 0x0000, 0xffff>(addr)
+	if(within<0xfb, 0xfb, 0xc000, 0xc1ff>(addr)) {
+    return register_read(addr, 0xFBC000, 0xFBFE00);
+	}
+
+	if (addr == 0xFBFE01) {
+		return x->kill;
+	} else if (addr == 0xFBFE03) {
+		return x->control;
+	} 
+	
+  return 0x00;
+}
+
+uint8 soft_here_mode_read(unsigned addr) {
+	// conditionally resolve addresses in soft here mode based on the
+	// "enable internal"(enInternal) and the "fixed internals"(enFixedInternal)
+	// bits in the control register.
+	//
+	//       6                5                4                3          2          1           0 
+	// 0[enSEGAExcept] 0[enSNESExcept] 0[enFixedInteral] 0[enInternal] 0[ROMHi] 0[EnSafeROM] 0[enTwoRAM]
+	//
+	if(x->control && 0x10) { // enFixedInternal
+		// if within FRED general reigster / modem register space
+		if(within<0xfb, 0xfb, 0xc000, 0xc1ff>(addr)) {
+      return register_read(addr, 0xFBC000, 0xFBFE00);
+		} else if (addr == 0xFBFE01) { //might be 0xFBFE00
+			return x->kill;
+		} else if (addr == 0xFBFE03) { //might be 0xFBFE02
+      return x->control;
+		}
+		return read_from_cart; // study how that works for a normal rom or the GameboyAdapter
+	} else if(x->control && 0x08) { // enInternal
+    // if within FRED general reigster / modem register space
+		if(within<0xff, 0xff, 0x8200, 0x83ff>(addr)) {
+      return register_read(addr, 0xFF8200, 0xFFC000);
+		} else if (addr == 0xFFC001) {
+			return x->kill;
+		} else if (addr == 0xFFC003) {
+      return x->control;
+		}
+		return read_from_cart; // study how that works for a normal rom or the GameboyAdapter
+	} else { // neither bit set 
+		// if within FRED general reigster / modem register space
+		if(within<0xff, 0xff, 0x8200, 0x83ff>(addr)) {
+      return register_read(addr, 0xFF8200, 0xFFC000);
+		} else if (addr == 0x4F00) {
+			return x->kill;
+		} else if (addr == 0x4F02) {
+      return x->control;
+		}
+		return read_from_cart; // study how that works for a normal rom or the GameboyAdapter
+	}
+}
+
+uint8 XBANDBase::read(unsigned addr) {
+	// automatically read from SRAM if the addr is in that range.
+	// I don't believe the location of SRAM is changed by the control
+	// registers ????
+	if(within<0xe0, 0xfa, 0x0000, 0xffff>(addr)
   || within<0xfb, 0xfb, 0x0000, 0xbfff>(addr)
   || within<0xfc, 0xff, 0x0000, 0xffff>(addr)
   || within<0x60, 0x7d, 0x0000, 0xffff>(addr)) {
@@ -340,155 +521,19 @@ uint8 XBANDBase::read(unsigned addr) {
 		addr = bus.mirror(addr, memory::xbandSram.size());
     return memory::xbandSram.read(addr);
   }
-
-  //0xFBC000 -- 0xFBFDFF
-  // seems if I change the read width of this beyond fbfdff, xband wont start...
-  if(within<0xfb, 0xfb, 0xc000, 0xfdff>(addr)) {
-	  uint8 reg = (addr-0xFBC000)/2;
-		
-    if (reg == 0x7d)
-			return 0x80;
-		if (reg == 0xb4) //kLEDData
-			return 0x7f;
-
-		if (reg == 0x94) { //krxbuff
-			if (x->rxbufconsumed >= x->rxbufindex) return 0;
-			uint8 r = x->rxbuf[x->rxbufconsumed];
-			//fprintf(stderr, "[---] RXBUF BYTE CONSUMED: 0x%02X | rxbufconsumed: 0x%02X\n", r, x->rxbufconsumed);
-			x->rxbufconsumed++;
-			if (x->rxbufconsumed == x->rxbufindex) {
-				//fprintf(stderr, "[*] reset the rxbufconsumed and the rxbufindex to 0\n");
-				x->rxbufconsumed = x->rxbufindex = 0;
-			}
-			return r;
-		}
-
-		if (reg == 0x98) { //kreadmstatus2
-			if (x->net_step) {
-				ssize_t ret = ::read(x->conn, &x->rxbuf[x->rxbufindex], sizeof(x->rxbuf) - x->rxbufindex);
-				
-				if (ret != -1 && ret != 0) {
-					if (x->net_step == 1) {
-						xband_send_identity();
-						::write(x->conn, x->txbuf, x->txbufindex);
-						x->txbufindex = 0;
-					}
-					
-					// debugging ---------------------------
-					// copy each of the new bytes added to the ring buffer this read
-					// to the packet debug array and process them.
-     		  for (int i = 0; i < ret; i++) {
-        		x->rx_packet_dbg[packet_index] = x->rxbuf[x->rxbufindex + i];
-        		//fprintf(stderr, "[-] BYTE IN THE RXBUF 0x%02X | loop: %d | rxbufindex: %d | loop_count: %d\n", x->rxbuf[x->rxbufindex + i], i, x->rxbufindex, loop_count);
-        		if (x->rx_packet_dbg[packet_index] == 0x03) {
-       		 		if (x->rx_packet_dbg[packet_index - 1] == 0x10) {
-       		 			//fprintf(stderr, "\n\n\n****** FOUND END OF PACKET ******\n\n\n");
-       		 			print_adsp_debug_in(packet_index);
-								uint16_t written = process_adsp_packet_in(x->rxbufindex + i);
-								
-								//if written > remaining buffer space
-
-								ret += written;
-
-       		 			packet_index = 0;
-     		   			for (int q = 0; q < ret; q++) {
-     		   				x->rx_packet_dbg[q] = 0x00;
-     		   			}
-   		     		}
-   		     		else
-   		     			packet_index++;
-   		     	}
-   		     	else
-   		     		packet_index++;
-  	      }
-  	      // debugging ---------------------------
-  	      loop_count += 1;
-  	      x->rxbufindex += ret;
-				} else if (ret != 0) {
-				  // no op
-				}
-				if (x->rxbufconsumed < x->rxbufindex) {
-					consecutive_reads++;
-
-					if (consecutive_reads >= 127) {
-					  consecutive_reads = 0;
-					  return 0;
-					}  
-					return 1;
-				}
-			}
-			consecutive_reads = 0;
-			return 0;
-		}
-		if (reg == 0xa0) {
-			return 0;
-		}
-		if (reg >= 0xc0 && reg <= 0xff) {  //begins @ 0xFBC180 (180/2 == c0)
-			uint8_t modemreg = reg - 0xc0;
-			uint8_t ret = 0;
-
-			if (modemreg == 0x00) {
-			}
-			switch (modemreg) {
-        case 0x19: // X-RAM Data (16bit)
-          ret = x->modem_regs[modemreg];
-          break;
-				case 0x09:
-					ret = x->modem_regs[modemreg];
-					break;
-				case 0x0b:
-					if (x->modem_line_relay) ret |= (1<<7); //TONEA
-					if (x->modem_set_ATV25) {
-						ret |= (1<<4); //ATV25
-						x->modem_set_ATV25 = 0;
-					}
-					break;
-				case 0x0d:
-					ret |= (1<<3); //U1DET
-					break;
-				case 0x0e:
-					ret |= 3; //k2400Baud
-					break;
-				case 0x0f:
-					ret |= (1<<7) | (1<<5); //RLSD, CTS
-					break;
-				case 0x1c:
-					ret = x->modem_regs[0x1c];
-					break;
-				case 0x1d:
-					ret = x->modem_regs[0x1d];
-					break;
-				case 0x1e:
-					ret = x->modem_regs[0x1e] | (1<<3); //TDBE
-					break;
-				case 0x1f:
-					ret = x->modem_regs[0x1f];
-					break;
-				default:
-					break;
-			}
-			return ret;
-		}
-
-		if (addr < 0xFBFE00) {
-			uint32_t offset = (addr - 0xFBC001) / 2;
-			if (offset < XBAND_REGS) {
-				return x->regs[offset];
-			} else {
-				return 0x5D;
-			}
-		}
+	// check the Kill control register to determine the current 
+	// mapping mode. 8 bit register but we only use the first 4 bits.
+	//
+	// 0[force] 0[soft] 0[not_used] 0[plain] 
+	//
+	// plain bit determines here(1) or normal/soft here(0)
+	if (x->kill && 0x01) {
+		return here_mode_read(addr);
+	}
+	else {
+		return soft_here_mode_read(addr);
 	}
 
-	if (addr == 0xFBFE01) {
-		return x->kill;
-	} else if (addr == 0xFBFE03) {
-		return x->control;
-	} else {
-		return 0x5D;
-	}
-	
-  return 0x00;
 }
 
 void XBANDBase::write(unsigned addr, uint8 data) {

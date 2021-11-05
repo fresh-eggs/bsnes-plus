@@ -147,38 +147,6 @@ SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {
   }
   xml << "'>\n";
 
-  if(type == TypeXBand) {
-    fprintf(stderr, "[*][cartride.hpp:xmlMemoryMap] TypeXBand\n");
-    //xml << "  <rom>\n";
-    //xml << "    <map mode='direct' address='00-3f:8000-ffff'/>\n";
-    //xml << "    <map mode='direct' address='80-bf:8000-ffff'/>\n";
-    //xml << "    <map mode='direct' address='40-7d:0000-ffff'/>\n";
-    //xml << "    <map mode='direct' address='c0-df:0000-ffff'/>\n";
-    //xml << "  </rom>\n";
-    //xml << "  <ram size='10000'>\n";
-    //xml << "    <map mode='linear' address='e0-e0:0000-ffff'/>\n";
-    //xml << "  </ram>\n";
-    xml << "  <xband>\n";
-    xml << "    <rom>\n";
-    xml << "      <map mode='direct' address='00-3f:8000-ffff'/>\n";
-    xml << "      <map mode='direct' address='80-bf:8000-ffff'/>\n";
-    xml << "      <map mode='direct' address='40-7d:0000-ffff'/>\n";
-    xml << "      <map mode='direct' address='c0-df:0000-ffff'/>\n";
-    //xml << "      <map mode='linear' address='d0-df:0000-ffff'/>\n";
-    //xml << "      <map mode='shadow' address='50-5f:0000-ffff'/>\n";
-    xml << "    </rom>\n";
-    xml << "    <ram size='10000'>\n";
-    xml << "      <map mode='linear' address='e0-e0:0000-ffff'/>\n";
-    xml << "    </ram>\n";
-    xml << "    <mmio>\n";
-    xml << "      <map mode='direct' address='e0-ff:0000-ffff'/>\n";
-    xml << "    </mmio>\n";
-    xml << "  </xband>\n";
-    xml << "</cartridge>\n";
-    xmlMemoryMap = xml;
-    return;
-  }
-
   if(mapper == SGBROM) {
     xml << "  <rom>\n";
     xml << "    <map mode='linear' address='00-7d:8000-ffff'/>\n";
@@ -544,7 +512,7 @@ SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {
     xml << "  </setarisc>\n";
   }
 
-  if(type == TypeXBand) {
+  if(0) { //xband
     fprintf(stderr, "[*][cartride.hpp:xmlMemoryMap] TypeXBand\n");
     xml << "  <xband>\n";
     xml << "    <rom>\n";
@@ -571,6 +539,54 @@ SNESCartridge::SNESCartridge(const uint8_t *data, unsigned size) {
   }
 
   xml << "</cartridge>\n";
+
+
+
+  if(type == TypeXBand) {
+    fprintf(stderr, "[*][cartride.hpp:xmlMemoryMap] TypeXBand\n");
+    //xml << "  <rom>\n";
+    //xml << "    <map mode='direct' address='00-3f:8000-ffff'/>\n";
+    //xml << "    <map mode='direct' address='80-bf:8000-ffff'/>\n";
+    //xml << "    <map mode='direct' address='40-7d:0000-ffff'/>\n";
+    //xml << "    <map mode='direct' address='c0-df:0000-ffff'/>\n";
+    //xml << "  </rom>\n";
+    //xml << "  <ram size='10000'>\n";
+    //xml << "    <map mode='linear' address='e0-e0:0000-ffff'/>\n";
+    //xml << "  </ram>\n";
+
+    //xml << "<cartridge region='NTSC'>\n";
+    //xml << "  <rom>\n";
+    //xml << "    <map mode='shadow' address='00-3f:8000-ffff'/>\n";
+    //xml << "    <map mode='linear' address='40-7d:0000-ffff'/>\n";
+    //xml << "    <map mode='shadow' address='80-bf:8000-ffff'/>\n";
+    //xml << "    <map mode='linear' address='c0-ff:0000-ffff'/>\n";
+    //xml << "  </rom>\n";
+
+    //xml << "  <ram size='4000'>\n"; //16k (16384)
+    //xml << "    <map mode='linear' address='20-3f:6000-7fff'/>\n";
+    //xml << "    <map mode='linear' address='a0-bf:6000-7fff'/>\n";
+    //xml << "  </ram>\n";
+    //xml << "</cartridge>\n";
+    xml << "<xband>\n";
+    xml << "  <rom>\n";
+    //xml << "      <map mode='direct' address='00-3f:8000-ffff'/>\n";
+    //xml << "      <map mode='direct' address='80-bf:8000-ffff'/>\n";
+    //xml << "      <map mode='direct' address='40-7d:0000-ffff'/>\n";
+    //xml << "      <map mode='direct' address='c0-df:0000-ffff'/>\n";
+    xml << "    <map mode='linear' address='d0-df:0000-ffff'/>\n";
+    xml << "    <map mode='shadow' address='50-5f:0000-ffff'/>\n";
+    xml << "  </rom>\n";
+    //xml << "  <ram size='10000'>\n";
+    //xml << "    <map mode='linear' address='e0-e0:0000-ffff'/>\n";
+    //xml << "  </ram>\n";
+    //xml << "  <mmio>\n";
+    //xml << "    <map mode='direct' address='e0-ff:0000-ffff'/>\n";
+    //xml << "  </mmio>\n";
+    xml << "</xband>\n";
+    xmlMemoryMap = xml;
+    return;
+  }
+
   xmlMemoryMap = xml;
 }
 

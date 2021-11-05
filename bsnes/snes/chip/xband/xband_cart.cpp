@@ -33,6 +33,9 @@ void XBANDCart::power() {
   bus.map(Bus::MapMode::Direct, 0x40, 0x7d, 0x0000, 0xffff, *this);
   bus.map(Bus::MapMode::Direct, 0x80, 0xbf, 0x8000, 0xffff, *this);
   bus.map(Bus::MapMode::Direct, 0xc0, 0xdf, 0x0000, 0xffff, *this);
+
+  //bus.map(Bus::MapMode::Direct, 0xd0, 0xdf, 0x0000, 0xffff, *this);
+  //bus.map(Bus::MapMode::Direct, 0x50, 0x5f, 0x0000, 0xffff, *this);
   
   //Force MMIO Map
   //bus.map(Bus::MapMode::Direct, 0xe0, 0xff, 0x0000, 0xffff, memory::xbandSram);
