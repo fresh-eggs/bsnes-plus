@@ -177,7 +177,7 @@ void XBANDBase::debug_modem_registers() {
 
 void XBANDBase::xband_send_identity() {
 	char hdr1[1024] = "///////EMU-";
-	char *id = "Waj04qaASNfmaRNw";
+	char *id = "your_id_goes_here";
 	strcat(hdr1, id);
 	strcat(hdr1, "\x0a");
 	::write(x->conn, &hdr1, strlen(hdr1));
