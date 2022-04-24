@@ -395,7 +395,7 @@ void XBANDBase::write(unsigned addr, uint8 data) {
 			case 0x07:
 				x->modem_line_relay = data & 0b10;
 				if (x->modem_line_relay == 0 && x->net_step) {
-					printf(stderr, "[-]Box hung up, killing connection\n");
+					fprintf(stderr, "[-]Box hung up, killing connection\n");
 					close(x->conn);
 					x->net_step = 0;
 					x->txbufpos = 0;
