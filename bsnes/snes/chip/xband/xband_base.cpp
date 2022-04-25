@@ -74,6 +74,8 @@ enum {
 
 XBANDBase xband_base;
 XBANDBase::XBANDState *x, obj;
+int consecutive_reads = 0;
+uint8_t loop_count = 0;
 
 void XBANDBase::Enter() {
 	xband_base.enter();
@@ -177,7 +179,7 @@ void XBANDBase::debug_modem_registers() {
 
 void XBANDBase::xband_send_identity() {
 	char hdr1[1024] = "///////EMU-";
-	char *id = "your_id_goes_here";
+	char *id = "Waj04qaASNfmaRNw";
 	strcat(hdr1, id);
 	strcat(hdr1, "\x0a");
 	::write(x->conn, &hdr1, strlen(hdr1));
@@ -227,22 +229,30 @@ uint8 XBANDBase::read(unsigned addr) {
 		if (reg == 0x98) { //kreadmstatus2
 			if (x->net_step) {
 				ssize_t ret = ::read(x->conn, &x->rxbuf[x->rxbufpos], sizeof(x->rxbuf) - x->rxbufpos);
+				
 				if (ret != -1 && ret != 0) {
 					if (x->net_step == 1) {
 						xband_send_identity();
-						//debug_modem_registers();
 						::write(x->conn, x->txbuf, x->txbufpos);
-						fprintf(stderr, "[+][modem][] Write post identity send\n");
 						x->txbufpos = 0;
 					}
-					x->rxbufpos += ret;
+
+  	      loop_count += 1;
+  	      x->rxbufpos += ret;
 				} else if (ret != 0) {
-					fprintf(stderr, "[+]Read error\n");
+				  // no op
 				}
 				if (x->rxbufused < x->rxbufpos) {
+					consecutive_reads++;
+
+					if (consecutive_reads >= 127) {
+					  consecutive_reads = 0;
+					  return 0;
+					}  
 					return 1;
 				}
 			}
+			consecutive_reads = 0;
 			return 0;
 		}
 		if (reg == 0xa0) {
